@@ -228,15 +228,21 @@ def parse_session_data(html_content):
         session_type = "unknown"
         unit = None
         is_lesson = False
+        is_unit_completion = False  # New: track unit completion lessons
         
         # Check for lesson indicator
         if "· lesson" in text:
             is_lesson = True
             
+        # Check for unit completion indicators (unit review, legendary)
+        if any(keyword in text.lower() for keyword in ["unit review", "legendary", "legendary / unit review"]):
+            is_unit_completion = True
+            session_type = "unit_completion"
+            
         # Check for personalized practice
-        if "personalized practice" in text:
+        elif "personalized practice" in text:
             session_type = "personalized_practice"
-        elif "story /practice" in text:
+        elif "story /practice" in text or "story / practice" in text:
             session_type = "story"
         else:
             # Look for unit name in skill links
@@ -262,6 +268,7 @@ def parse_session_data(html_content):
             'session_type': session_type,
             'unit': unit,
             'is_lesson': is_lesson,
+            'is_unit_completion': is_unit_completion,
             'raw_text': text
         }
         
@@ -270,14 +277,55 @@ def parse_session_data(html_content):
     # Sort sessions chronologically (oldest first for proper unit transition detection)
     sessions.sort(key=lambda x: x['datetime'])
     
-    # Now assign units based on chronological transitions
+    # Now assign units based on unit completion transitions
     current_unit = None
+    unit_completion_transitions = {}  # Track when units are completed
+    
+    # First pass: identify unit completions and their associated units
     for session in sessions:
-        if session['unit']:  # This session has a unit
+        if session['unit']:  # This session has a unit name
             current_unit = session['unit']
-        elif session['session_type'] == 'personalized_practice' and current_unit:
-            # Assign personalized practice to current active unit
+        elif session['is_unit_completion'] and current_unit:
+            # This is a unit completion for the current unit
             session['unit'] = current_unit
+            unit_completion_transitions[current_unit] = session['datetime']
+            print(f"Found unit completion for {current_unit} at {session['datetime']}")
+    
+    # Second pass: assign practice sessions to the correct unit based on completion transitions
+    current_active_unit = None
+    completed_units = set()
+    
+    for session in sessions:
+        if session['unit'] and not session['is_unit_completion']:
+            # Regular unit lesson - this unit becomes active
+            current_active_unit = session['unit']
+        elif session['is_unit_completion']:
+            # Unit completion - mark this unit as completed
+            completed_unit = session['unit']
+            if completed_unit:
+                completed_units.add(completed_unit)
+                print(f"Unit {completed_unit} completed at {session['datetime']}")
+            # After completion, no active unit until next unit starts
+            current_active_unit = None
+        elif session['session_type'] == 'personalized_practice' and not session['unit']:
+            # Unassigned practice session - assign to current active unit
+            if current_active_unit and current_active_unit not in completed_units:
+                # Assign to current active unit if it's not completed yet
+                session['unit'] = current_active_unit
+            else:
+                # If no active unit or current unit is completed, 
+                # this practice belongs to the next unit (which we'll determine later)
+                pass
+    
+    # Third pass: assign remaining practice sessions to the next unit after completion
+    for i, session in enumerate(sessions):
+        if session['session_type'] == 'personalized_practice' and not session['unit']:
+            # Look forward to find the next unit that starts
+            for j in range(i + 1, len(sessions)):
+                future_session = sessions[j]
+                if future_session['unit'] and not future_session['is_unit_completion']:
+                    session['unit'] = future_session['unit']
+                    break
     
     # Sort back to newest first for output
     sessions.sort(key=lambda x: x['datetime'], reverse=True)
@@ -338,9 +386,9 @@ def calculate_unit_stats(sessions):
         if not stats['last_seen'] or session_date > stats['last_seen']:
             stats['last_seen'] = session_date
         
-        if session['is_lesson']:
+        if session['is_lesson'] or session['is_unit_completion']:
             stats['total_lessons'] += 1
-            stats['total_combined_lessons'] += 1  # Count core lessons
+            stats['total_combined_lessons'] += 1  # Count core lessons and completions
         elif session['session_type'] == 'personalized_practice':
             stats['total_practice'] += 1
             stats['total_combined_lessons'] += 1  # Count practice as lessons too
