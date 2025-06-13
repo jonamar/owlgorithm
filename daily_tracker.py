@@ -11,6 +11,7 @@ import re
 import subprocess
 import glob
 from datetime import datetime
+from pushover_notifier import PushoverNotifier
 
 # --- Configuration ---
 MARKDOWN_FILE = 'personal-math.md'
@@ -146,6 +147,9 @@ def main():
     has_new_units = bool(newly_completed)
     has_new_lessons = new_total_lessons != old_total_lessons
 
+    # Initialize Pushover notifier
+    notifier = PushoverNotifier()
+
     if has_new_units or has_new_lessons:
         with open(MARKDOWN_FILE, 'r') as f:
             content = f.read()
@@ -158,8 +162,48 @@ def main():
             with open(STATE_FILE, 'w') as f:
                 json.dump(state_data, f, indent=2)
             print(f"✅ State file '{STATE_FILE}' updated.")
+            
+            # Send push notification with updated progress
+            if notifier.is_enabled():
+                # Calculate current metrics for notification
+                new_completed_units = len(newly_completed)
+                new_remaining_units = TOTAL_UNITS_IN_COURSE - len(all_completed_in_json)
+                total_lessons_remaining = new_remaining_units * BASE_LESSONS_PER_UNIT
+                lessons_per_day_required = total_lessons_remaining / GOAL_DAYS
+                time_per_day_required_mins = lessons_per_day_required * BASE_MINS_PER_LESSON
+                
+                hours = int(time_per_day_required_mins // 60)
+                minutes = int(time_per_day_required_mins % 60)
+                time_per_day_str = f"~{hours}h {minutes}m"
+                
+                notifier.send_daily_update(
+                    newly_completed_units=new_completed_units,
+                    total_lessons=new_total_lessons,
+                    lessons_per_day_required=lessons_per_day_required,
+                    time_per_day_required=time_per_day_str
+                )
     else:
         print("✅ No new units or lessons completed since last check. No updates needed.")
+        
+        # Send daily check notification even if no progress (optional)
+        if notifier.is_enabled():
+            # Calculate current metrics
+            completed_units = len(all_completed_in_json)
+            remaining_units = TOTAL_UNITS_IN_COURSE - completed_units
+            total_lessons_remaining = remaining_units * BASE_LESSONS_PER_UNIT
+            lessons_per_day_required = total_lessons_remaining / GOAL_DAYS
+            time_per_day_required_mins = lessons_per_day_required * BASE_MINS_PER_LESSON
+            
+            hours = int(time_per_day_required_mins // 60)
+            minutes = int(time_per_day_required_mins % 60)
+            time_per_day_str = f"~{hours}h {minutes}m"
+            
+            notifier.send_daily_update(
+                newly_completed_units=0,
+                total_lessons=new_total_lessons,
+                lessons_per_day_required=lessons_per_day_required,
+                time_per_day_required=time_per_day_str
+            )
 
 if __name__ == "__main__":
     main() 

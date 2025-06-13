@@ -37,6 +37,9 @@ ENV/
 personal-math.md
 duolingo_data/
 
+# Pushover credentials (keep secure)
+pushover_config.json
+
 # IDE
 .vscode/
 .idea/
