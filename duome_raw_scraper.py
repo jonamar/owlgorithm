@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Enhanced Duome Raw Data Scraper
+Enhanced Duome Raw Data Scraper with Auto-Update
 Fetches and analyzes Duolingo session data directly from duome.eu
+Automatically clicks the "update your stats" button before scraping
 Now includes daily lesson counts and unit-specific analysis
 """
 
@@ -13,11 +14,169 @@ from collections import defaultdict, Counter
 from bs4 import BeautifulSoup
 import argparse
 import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
+def fetch_duome_data_with_update(username, headless=True):
+    """Fetch raw data from duome.eu with automatic stats update"""
+    url = f"https://duome.eu/{username}"
+    print(f"Opening browser and navigating to {url}...")
+    
+    driver = None
+    try:
+        # Try different browsers in order of preference
+        browsers_to_try = [
+            ('chrome', lambda: setup_chrome_driver(headless)),
+            ('firefox', lambda: setup_firefox_driver(headless)),
+            ('safari', lambda: setup_safari_driver()),
+        ]
+        
+        driver = None
+        browser_name = None
+        
+        for name, setup_func in browsers_to_try:
+            try:
+                print(f"Trying {name.title()} browser...")
+                driver = setup_func()
+                browser_name = name
+                print(f"Successfully initialized {name.title()} browser")
+                break
+            except Exception as e:
+                print(f"{name.title()} browser failed: {e}")
+                continue
+        
+        if not driver:
+            print("No suitable browser found. Please install Chrome, Firefox, or enable Safari WebDriver.")
+            print("For Chrome: Download from https://www.google.com/chrome/")
+            print("For Safari: Run 'sudo safaridriver --enable' in terminal")
+            return None
+        
+        # Navigate to the page
+        driver.get(url)
+        
+        # Wait for page to load
+        print("Waiting for page to load...")
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        
+        # Look for the update button
+        print("Looking for update button...")
+        try:
+            # Try different possible selectors for the update button
+            update_selectors = [
+                "//*[contains(text(), 'click here') and contains(text(), 'update')]",
+                "//*[contains(text(), 'Please, click here')]",
+                "//a[contains(@href, 'update')]",
+                "//button[contains(text(), 'update')]",
+                "//*[@class='update-button']",
+                "//*[@id='update-button']",
+            ]
+            
+            update_button = None
+            for selector in update_selectors:
+                try:
+                    update_button = driver.find_element(By.XPATH, selector)
+                    if update_button and update_button.is_displayed():
+                        print(f"Found update button with XPath: {selector}")
+                        break
+                except NoSuchElementException:
+                    continue
+            
+            if update_button:
+                print("Clicking update button...")
+                # Scroll to button first
+                driver.execute_script("arguments[0].scrollIntoView(true);", update_button)
+                time.sleep(1)
+                
+                # Try clicking with JavaScript (more reliable)
+                driver.execute_script("arguments[0].click();", update_button)
+                
+                # Wait for update to complete
+                print("Waiting for stats to update...")
+                time.sleep(8)  # Give it more time to update
+                
+                # Check if page has updated (look for newer timestamps)
+                print("Checking if update completed...")
+                
+            else:
+                print("Update button not found, proceeding with current data...")
+                print("The page might already have the latest data.")
+                
+        except Exception as e:
+            print(f"Could not click update button: {e}")
+            print("Proceeding with current data...")
+        
+        # Get the page source after potential update
+        print("Extracting page data...")
+        page_source = driver.page_source
+        
+        # Parse with BeautifulSoup to find raw data
+        soup = BeautifulSoup(page_source, 'html.parser')
+        raw_div = soup.find('div', {'id': 'raw'})
+        
+        if not raw_div:
+            print("Error: Could not find raw data section")
+            return None
+            
+        return str(raw_div)
+        
+    except Exception as e:
+        print(f"Error during browser automation: {e}")
+        return None
+        
+    finally:
+        if driver:
+            driver.quit()
+
+def setup_chrome_driver(headless=True):
+    """Setup Chrome WebDriver"""
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from webdriver_manager.chrome import ChromeDriverManager
+    
+    chrome_options = Options()
+    if headless:
+        chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    
+    service = Service(ChromeDriverManager().install())
+    return webdriver.Chrome(service=service, options=chrome_options)
+
+def setup_firefox_driver(headless=True):
+    """Setup Firefox WebDriver"""
+    from selenium.webdriver.firefox.service import Service
+    from selenium.webdriver.firefox.options import Options
+    from webdriver_manager.firefox import GeckoDriverManager
+    
+    firefox_options = Options()
+    if headless:
+        firefox_options.add_argument("--headless")
+    
+    service = Service(GeckoDriverManager().install())
+    return webdriver.Firefox(service=service, options=firefox_options)
+
+def setup_safari_driver():
+    """Setup Safari WebDriver (macOS only)"""
+    from selenium.webdriver.safari.service import Service
+    
+    # Safari doesn't support headless mode
+    service = Service()
+    return webdriver.Safari(service=service)
 
 def fetch_duome_data(username):
-    """Fetch raw data from duome.eu"""
+    """Fallback method: Fetch raw data from duome.eu without automation"""
     url = f"https://duome.eu/{username}"
-    print(f"Fetching data from {url}...")
+    print(f"Fetching data from {url} (fallback method)...")
     
     try:
         response = requests.get(url)
@@ -195,10 +354,17 @@ def calculate_unit_stats(sessions):
     
     return dict(unit_stats)
 
-def scrape_duome(username):
+def scrape_duome(username, use_automation=True, headless=True):
     """Main scraping function"""
     # Fetch data from duome.eu
-    html_content = fetch_duome_data(username)
+    if use_automation:
+        html_content = fetch_duome_data_with_update(username, headless)
+        if not html_content:
+            print("Browser automation failed, trying fallback method...")
+            html_content = fetch_duome_data(username)
+    else:
+        html_content = fetch_duome_data(username)
+        
     if not html_content:
         return None
     
@@ -260,12 +426,17 @@ def scrape_duome(username):
     return output_data
 
 def main():
-    parser = argparse.ArgumentParser(description='Scrape and analyze Duome raw data')
+    parser = argparse.ArgumentParser(description='Scrape and analyze Duome raw data with auto-update')
     parser.add_argument('--username', default='jonamar', help='Duolingo username to scrape')
+    parser.add_argument('--no-automation', action='store_true', help='Skip browser automation (faster but no auto-update)')
+    parser.add_argument('--show-browser', action='store_true', help='Show browser window during automation (for debugging)')
     
     args = parser.parse_args()
     
-    result = scrape_duome(args.username)
+    use_automation = not args.no_automation
+    headless = not args.show_browser
+    
+    result = scrape_duome(args.username, use_automation, headless)
     if result:
         print("\nScraping completed successfully!")
     else:
