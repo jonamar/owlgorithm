@@ -75,16 +75,16 @@ def get_newly_completed_units(json_data, state_data):
     newly_completed = completed_in_json - processed_units
     return newly_completed, completed_in_json
 
-def update_markdown_file(newly_completed_count):
+def update_markdown_file(newly_completed_count, total_lessons_completed):
     """Reads, updates, and writes the personal-math.md file."""
-    print(f"📈 Found {newly_completed_count} new completed unit(s). Updating stats...")
+    print(f"📈 Updating stats...")
     
     with open(MARKDOWN_FILE, 'r') as f:
         content = f.read()
 
     # --- Read existing values ---
     try:
-        completed_units = int(re.search(r"Completed Units:\s*(\d+)", content).group(1))
+        completed_units_old = int(re.search(r"Completed Units:\s*(\d+)", content).group(1))
         lessons_per_unit = int(re.search(r"Total Lessons:\s*(\d+)", content).group(1))
         mins_per_lesson = float(re.search(r"Time per Lesson:\s*([\d.]+)", content).group(1))
     except (AttributeError, ValueError) as e:
@@ -92,13 +92,12 @@ def update_markdown_file(newly_completed_count):
         return
 
     # --- Calculate new values ---
-    new_completed_units = completed_units + newly_completed_count
+    new_completed_units = completed_units_old + newly_completed_count
     new_remaining_units = TOTAL_UNITS_IN_COURSE - new_completed_units
     total_lessons_remaining = new_remaining_units * lessons_per_unit
     lessons_per_day_required = total_lessons_remaining / GOAL_DAYS
     time_per_day_required_mins = lessons_per_day_required * mins_per_lesson
     
-    # Format time per day for display
     hours = int(time_per_day_required_mins // 60)
     minutes = int(time_per_day_required_mins % 60)
     time_per_day_str = f"~{hours} hour {minutes} minutes"
@@ -106,18 +105,19 @@ def update_markdown_file(newly_completed_count):
     # --- Update content with new values ---
     content = re.sub(r"(Completed Units:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
     content = re.sub(r"(Remaining Units:\s*)(\d+)", rf"\g<1>{new_remaining_units}", content)
+    content = re.sub(r"(Total Lessons Completed:\s*)(\d+)", rf"\g<1>{total_lessons_completed}", content)
     content = re.sub(r"(Total Lessons Remaining:\s*)~?[\d,]+", rf"\g<1>~{total_lessons_remaining:,.0f}", content)
     content = re.sub(r"(Lessons Per Day Required:\s*)\*\*~?[\d.]+\*\*", rf"\g<1>**~{lessons_per_day_required:.1f} lessons**", content)
     content = re.sub(r"(Time Per Day Required:\s*)\*\*~?[\w\s]+\*\*", rf"\g<1>**{time_per_day_str}**", content)
     content = re.sub(r"(\*Last updated:\s*)[\w\s,]+", rf"\g<1>{datetime.now().strftime('%B %d, %Y')}", content)
 
-    # --- Write back to file ---
     with open(MARKDOWN_FILE, 'w') as f:
         f.write(content)
     
     print(f"✅ Successfully updated {MARKDOWN_FILE}.")
-    print(f"   - Remaining Units: {new_remaining_units}")
-    print(f"   - Daily Pace: {lessons_per_day_required:.1f} lessons ({time_per_day_str})")
+    if newly_completed_count > 0:
+        print(f"   - Newly Completed Units: {newly_completed_count}")
+    print(f"   - Total Lessons Completed: {total_lessons_completed}")
 
 def main():
     """Main execution function."""
@@ -129,26 +129,33 @@ def main():
         print("❌ No JSON file found after running scraper.")
         return
 
-    # Load data from scraper and state file
     with open(latest_json_path, 'r') as f:
         json_data = json.load(f)
         
+    state_data = {}
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, 'r') as f:
             state_data = json.load(f)
-    else:
-        state_data = {}
 
+    # Check for changes
     newly_completed, all_completed_in_json = get_newly_completed_units(json_data, state_data)
+    new_total_lessons = json_data.get('total_lessons_completed', 0)
+    old_total_lessons = state_data.get('total_lessons_completed', 0)
 
-    if newly_completed:
-        update_markdown_file(len(newly_completed))
-        # Update state file with the new complete set of processed units
+    has_new_units = bool(newly_completed)
+    has_new_lessons = new_total_lessons > old_total_lessons
+
+    if has_new_units or has_new_lessons:
+        update_markdown_file(len(newly_completed), new_total_lessons)
+        
+        # Update state file with the latest data
+        state_data['processed_units'] = list(all_completed_in_json)
+        state_data['total_lessons_completed'] = new_total_lessons
         with open(STATE_FILE, 'w') as f:
-            json.dump({'processed_units': list(all_completed_in_json)}, f, indent=2)
+            json.dump(state_data, f, indent=2)
         print(f"✅ State file '{STATE_FILE}' updated.")
     else:
-        print("✅ No new units completed since last check. No updates needed.")
+        print("✅ No new units or lessons completed since last check. No updates needed.")
 
 if __name__ == "__main__":
     main() 

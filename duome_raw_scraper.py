@@ -116,16 +116,7 @@ def fetch_duome_data_with_update(username, headless=True):
         # Get the page source after potential update
         print("Extracting page data...")
         page_source = driver.page_source
-        
-        # Parse with BeautifulSoup to find raw data
-        soup = BeautifulSoup(page_source, 'html.parser')
-        raw_div = soup.find('div', {'id': 'raw'})
-        
-        if not raw_div:
-            print("Error: Could not find raw data section")
-            return None
-            
-        return str(raw_div)
+        return page_source
         
     except Exception as e:
         print(f"Error during browser automation: {e}")
@@ -181,16 +172,7 @@ def fetch_duome_data(username):
     try:
         response = requests.get(url)
         response.raise_for_status()
-        
-        # Find the raw data section
-        soup = BeautifulSoup(response.content, 'html.parser')
-        raw_div = soup.find('div', {'id': 'raw'})
-        
-        if not raw_div:
-            print("Error: Could not find raw data section")
-            return None
-            
-        return str(raw_div)
+        return response.content
         
     except requests.RequestException as e:
         print(f"Error fetching data: {e}")
@@ -415,15 +397,33 @@ def scrape_duome(username, use_automation=True, headless=True):
         
     if not html_content:
         return None
+
+    soup = BeautifulSoup(html_content, 'html.parser')
     
-    print(f"Parsing session data for {username}...")
-    sessions, unit_transitions = parse_session_data(html_content)
+    # --- New: Parse main stats for total lesson count ---
+    total_lessons_completed = 0
+    try:
+        stats_text = soup.get_text()
+        lessons_match = re.search(r"Lessons:\s*([\d,]+)", stats_text)
+        if lessons_match:
+            total_lessons_completed = int(lessons_match.group(1).replace(',', ''))
+            print(f"📊 Found total lessons completed: {total_lessons_completed}")
+    except Exception as e:
+        print(f"⚠️ Could not parse total lessons count: {e}")
+
+    # --- Parse session data from raw div ---
+    raw_div = soup.find('div', {'id': 'raw'})
+    if not raw_div:
+        print("Error: Could not find raw data section in the page source")
+        sessions, unit_transitions = [], {}
+    else:
+        sessions, unit_transitions = parse_session_data(str(raw_div))
     
     if not sessions:
         print("No session data found")
-        return None
+        # Do not fail if only session data is missing, we might still have stats
     
-    print(f"Found {len(sessions)} sessions")
+    print(f"Found {len(sessions)} recent sessions")
     
     # Calculate statistics
     daily_stats = calculate_daily_stats(sessions)
@@ -433,6 +433,7 @@ def scrape_duome(username, use_automation=True, headless=True):
     output_data = {
         'username': username,
         'scraped_at': datetime.now().isoformat(),
+        'total_lessons_completed': total_lessons_completed,
         'total_sessions': len(sessions),
         'sessions': sessions,
         'daily_stats': daily_stats,
