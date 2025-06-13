@@ -155,6 +155,7 @@ def calculate_unit_stats(sessions):
         'total_sessions': 0,
         'total_lessons': 0,
         'total_practice': 0,
+        'total_combined_lessons': 0,  # New: core lessons + practice sessions
         'total_xp': 0,
         'first_seen': None,
         'last_seen': None,
@@ -180,8 +181,10 @@ def calculate_unit_stats(sessions):
         
         if session['is_lesson']:
             stats['total_lessons'] += 1
+            stats['total_combined_lessons'] += 1  # Count core lessons
         elif session['session_type'] == 'personalized_practice':
             stats['total_practice'] += 1
+            stats['total_combined_lessons'] += 1  # Count practice as lessons too
     
     # Calculate practice-to-lesson ratios
     for unit, stats in unit_stats.items():
@@ -251,7 +254,8 @@ def scrape_duome(username):
     print(f"\n=== UNIT STATISTICS ===")
     for unit, stats in unit_stats.items():
         ratio = stats['practice_to_lesson_ratio']
-        print(f"{unit}: {stats['total_lessons']} lessons, {stats['total_practice']} practice (ratio: {ratio:.2f}:1)")
+        total_combined = stats['total_combined_lessons']
+        print(f"{unit}: {stats['total_lessons']} core lessons, {stats['total_practice']} practice, {total_combined} total lessons (ratio: {ratio:.2f}:1)")
     
     return output_data
 
