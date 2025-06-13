@@ -1,16 +1,41 @@
 #!/usr/bin/env python3
 """
 Enhanced Duome Raw Data Scraper
-Extracts and analyzes Duolingo session data from raw duome.eu HTML
+Fetches and analyzes Duolingo session data directly from duome.eu
 Now includes daily lesson counts and unit-specific analysis
 """
 
 import re
 import json
+import requests
 from datetime import datetime
 from collections import defaultdict, Counter
 from bs4 import BeautifulSoup
 import argparse
+import time
+
+def fetch_duome_data(username):
+    """Fetch raw data from duome.eu"""
+    url = f"https://duome.eu/{username}"
+    print(f"Fetching data from {url}...")
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        # Find the raw data section
+        soup = BeautifulSoup(response.content, 'html.parser')
+        raw_div = soup.find('div', {'id': 'raw'})
+        
+        if not raw_div:
+            print("Error: Could not find raw data section")
+            return None
+            
+        return str(raw_div)
+        
+    except requests.RequestException as e:
+        print(f"Error fetching data: {e}")
+        return None
 
 def parse_session_data(html_content):
     """Parse session data from raw HTML content"""
@@ -167,21 +192,12 @@ def calculate_unit_stats(sessions):
     
     return dict(unit_stats)
 
-def scrape_duome_raw(html_file, username=None):
+def scrape_duome(username):
     """Main scraping function"""
-    try:
-        with open(html_file, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-    except FileNotFoundError:
-        print(f"Error: File '{html_file}' not found")
+    # Fetch data from duome.eu
+    html_content = fetch_duome_data(username)
+    if not html_content:
         return None
-    except Exception as e:
-        print(f"Error reading file: {e}")
-        return None
-    
-    # Extract username from filename if not provided
-    if not username:
-        username = html_file.split('.')[0].replace('duome_raw_', '')
     
     print(f"Parsing session data for {username}...")
     sessions, unit_transitions = parse_session_data(html_content)
@@ -241,12 +257,11 @@ def scrape_duome_raw(html_file, username=None):
 
 def main():
     parser = argparse.ArgumentParser(description='Scrape and analyze Duome raw data')
-    parser.add_argument('html_file', help='Path to the raw HTML file')
-    parser.add_argument('--username', help='Username (auto-detected from filename if not provided)')
+    parser.add_argument('--username', default='jonamar', help='Duolingo username to scrape')
     
     args = parser.parse_args()
     
-    result = scrape_duome_raw(args.html_file, args.username)
+    result = scrape_duome(args.username)
     if result:
         print("\nScraping completed successfully!")
     else:
