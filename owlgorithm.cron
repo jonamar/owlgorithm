@@ -1,0 +1,1 @@
+0 9 * * * cd /Users/jonamar/Documents/owlgorithm && /Users/jonamar/Documents/owlgorithm/duolingo_env/bin/python /Users/jonamar/Documents/owlgorithm/daily_tracker.py >> /Users/jonamar/Documents/owlgorithm/tracker.log 2>&1 
