@@ -107,7 +107,21 @@ def update_markdown_file(newly_completed_count, total_lessons_completed, content
     
     # --- Read existing values ---
     try:
-        completed_units_old = int(re.search(r"Completed Units:\s*(\d+)", content).group(1))
+        # More robust regex that handles markdown formatting, bullet points, etc.
+        completed_units_match = re.search(r"\*\*Completed Units\*\*:?\s*(\d+)", content)
+        if not completed_units_match:
+            # Try alternative formats
+            completed_units_match = re.search(r"Completed Units:?\s*(\d+)", content)
+        
+        if not completed_units_match:
+            # Last resort: just look for the number after 'Completed Units'
+            completed_units_match = re.search(r"Completed Units.*?(\d+)", content)
+            
+        if not completed_units_match:
+            raise ValueError("Could not locate the 'Completed Units' pattern in the file")
+            
+        completed_units_old = int(completed_units_match.group(1))
+        print(f"Found completed units: {completed_units_old}")
     except (AttributeError, ValueError) as e:
         print(f"❌ Could not parse 'Completed Units' from {MARKDOWN_FILE}: {e}")
         return False

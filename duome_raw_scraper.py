@@ -25,8 +25,10 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 def fetch_duome_data_with_update(username, headless=True):
     """Fetch raw data from duome.eu with automatic stats update"""
+    # Use direct URL with update parameter for more reliable updates
     url = f"https://duome.eu/{username}"
-    print(f"Opening browser and navigating to {url}...")
+    update_url = f"https://duome.eu/{username}?update=true"
+    print(f"Opening browser and navigating to {update_url} (with auto-update)...")
     
     driver = None
     try:
@@ -57,125 +59,78 @@ def fetch_duome_data_with_update(username, headless=True):
             print("For Safari: Run 'sudo safaridriver --enable' in terminal")
             return None
         
-        # Navigate to the page
-        driver.get(url)
+        # Navigate to the page with update parameter
+        driver.get(update_url)
+        print("Navigated to page with update parameter - stats should be refreshed automatically")
         
-        # Wait for page to load
-        print("Waiting for page to load...")
-        WebDriverWait(driver, 10).until(
+        # Wait for page to load and update to complete
+        print("Waiting for page to load and stats to update...")
+        WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
         
-        # Look for the update button
-        print("Looking for update button...")
+        # Check for timestamp before attempting click
+        timestamp_before = None
         try:
-            # Capture the current timestamp on the page before update
-            before_update_timestamp = None
+            timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/parent::*")
+            timestamp_before = timestamp_element.text if timestamp_element else None
+            print(f"Timestamp before update: {timestamp_before}")
+        except (NoSuchElementException, AttributeError):
+            print("Could not find timestamp element before update")
+            
+        # Try to find and click the specific update button even if we used ?update=true
+        print("Looking for the aggiorna update element...")
+        update_clicked = False
+        
+        selectors = [
+            # Target the exact element as specified
+            (By.CSS_SELECTOR, f"span.fade.aggiorna.inline[data-id='{username}']"),
+            (By.CSS_SELECTOR, "span.fade.aggiorna.inline"),
+            (By.CSS_SELECTOR, ".aggiorna"),
+            (By.XPATH, f"//span[@data-id='{username}']"),
+            (By.XPATH, "//span[contains(@class, 'aggiorna')]"),
+        ]
+        
+        for selector_type, selector in selectors:
             try:
-                # Try to find the last update timestamp
-                timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/following-sibling::*[1]")
-                before_update_timestamp = timestamp_element.text if timestamp_element else None
-                print(f"Current timestamp before update: {before_update_timestamp}")
-            except (NoSuchElementException, AttributeError):
-                print("Could not find timestamp element before update")
-            
-            # Try different possible selectors for the update button
-            # More specific selectors first, then more generic ones
-            update_selectors = [
-                # Look for elements containing the text and icon often used for updates
-                "//a[contains(@class, 'update') or contains(@id, 'update')]",
-                "//img[contains(@alt, 'update') or contains(@src, 'update')]/parent::a",
-                "//a[.//img[contains(@alt, 'update') or contains(@src, 'update')]]",
-                # Look for specific text patterns in links or buttons
-                "//a[contains(text(), 'update your stats') or contains(., 'update your stats')]",
-                "//a[contains(text(), 'click here') and contains(., 'update')]", 
-                "//a[contains(text(), 'Please, click here')]",
-                "//button[contains(text(), 'update')]",
-                # Fall back to more generic image-based selectors
-                "//img[@alt='update']/parent::*",
-                "//img[contains(@src, 'refresh') or contains(@src, 'update')]/parent::*",
-                # Fall back to just looking for the duome.eu site's blue circular refresh icon
-                "//a/img[@width='40' and @height='40']/parent::a",
-                "//img[@width='40' and @height='40']/parent::a",
-                "//a[contains(@href, 'javascript') and .//img]",
-            ]
-            
-            update_button = None
-            for selector in update_selectors:
-                try:
-                    elements = driver.find_elements(By.XPATH, selector)
-                    for elem in elements:
-                        # Check if this element looks like an update button (has image or relevant text)
-                        if (elem.is_displayed() and 
-                            (elem.find_elements(By.TAG_NAME, "img") or 
-                             "update" in elem.text.lower() or
-                             "click here" in elem.text.lower())):
-                            update_button = elem
-                            print(f"Found update button with XPath: {selector}")
-                            print(f"Button text: {update_button.text}")
-                            break
-                    if update_button:
-                        break
-                except Exception as e:
-                    continue
-            
-            if update_button:
-                print("Clicking update button...")
-                # Scroll to button to make sure it's in view
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", update_button)
-                time.sleep(2)  # Wait longer after scrolling
-                
-                # Try multiple click methods for better reliability
-                try:
-                    # Try regular click first
-                    update_button.click()
-                except Exception:
+                elements = driver.find_elements(selector_type, selector)
+                if elements:
+                    update_button = elements[0]
+                    print(f"Found update button using selector: {selector}")
                     try:
-                        # If regular click fails, try JavaScript click
-                        driver.execute_script("arguments[0].click();", update_button)
-                    except Exception:
-                        # If that also fails, try moving to element and clicking
-                        from selenium.webdriver.common.action_chains import ActionChains
-                        actions = ActionChains(driver)
-                        actions.move_to_element(update_button).click().perform()
-                
-                # Wait longer for update to complete (12 seconds instead of 8)
-                print("Waiting for stats to update...")
-                for i in range(12):
-                    print(f"Waiting... {i+1}/12 seconds")
-                    time.sleep(1)
-                
-                # Check if page has updated by looking for changes in the timestamp
-                print("Checking if update completed...")
-                update_successful = False
-                try:
-                    # Try to find the last update timestamp again
-                    timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/following-sibling::*[1]")
-                    after_update_timestamp = timestamp_element.text if timestamp_element else None
-                    
-                    if before_update_timestamp and after_update_timestamp and before_update_timestamp != after_update_timestamp:
-                        print(f"Update successful! Timestamp changed from {before_update_timestamp} to {after_update_timestamp}")
-                        update_successful = True
-                    else:
-                        print(f"Timestamp didn't change: {before_update_timestamp} vs {after_update_timestamp}")
-                        # Try refreshing the page to see if that helps
-                        print("Refreshing page to ensure we have the latest data...")
-                        driver.refresh()
-                        time.sleep(5)  # Wait for page to reload
-                except (NoSuchElementException, AttributeError):
-                    print("Could not verify update by timestamp")
-                
-                # Additional check by looking at the page source for changes
-                if not update_successful:
-                    print("Update verification by timestamp failed, checking for page changes...")
-                    # Just proceed with whatever data we have                
-            else:
-                print("Update button not found, proceeding with current data...")
-                print("The page might already have the latest data or the button has changed.")
-                
-        except Exception as e:
-            print(f"Could not click update button: {e}")
-            print("Proceeding with current data...")
+                        print("Clicking update button...")
+                        update_button.click()
+                        update_clicked = True
+                        print("Update button clicked successfully")
+                        break
+                    except Exception as e:
+                        print(f"Standard click failed: {e}, trying JavaScript click")
+                        try:
+                            driver.execute_script("arguments[0].click();", update_button)
+                            update_clicked = True
+                            print("JavaScript click succeeded")
+                            break
+                        except Exception as e2:
+                            print(f"JavaScript click failed: {e2}")
+            except Exception as e:
+                print(f"Error with selector {selector}: {e}")
+                continue
+        
+        if not update_clicked:
+            print("Update button not found or not clickable")
+            print("Proceeding with current data loaded from ?update=true URL")
+            
+        # Give additional time for the update to complete
+        print("Allowing time for stats update to complete...")
+        time.sleep(12)  # Increased wait time for update to process
+        
+        # Verify the update by checking for timestamp
+        try:
+            timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/following-sibling::*[1]")
+            current_timestamp = timestamp_element.text if timestamp_element else "Unknown"
+            print(f"Current page timestamp: {current_timestamp}")
+        except (NoSuchElementException, AttributeError):
+            print("Could not find timestamp element (this is normal for some page layouts)")
         
         # Get the page source after potential update
         print("Extracting page data...")
@@ -547,21 +502,72 @@ def scrape_duome(username, use_automation=True, headless=True):
     return output_data
 
 def main():
-    parser = argparse.ArgumentParser(description='Scrape and analyze Duome raw data with auto-update')
-    parser.add_argument('--username', default='jonamar', help='Duolingo username to scrape')
-    parser.add_argument('--no-automation', action='store_true', help='Skip browser automation (faster but no auto-update)')
-    parser.add_argument('--show-browser', action='store_true', help='Show browser window during automation (for debugging)')
+    """Command-line interface to run the scraper."""
+    parser = argparse.ArgumentParser(description="Fetch and analyze Duolingo session data from duome.eu")
+    parser.add_argument("--username", "-u", default="jonamar", help="Duolingo username to fetch data for")
+    parser.add_argument("--no-automation", "-n", action="store_true", help="Skip browser automation and use direct request")
+    parser.add_argument("--headless", "-l", action="store_false", dest="visible", help="Run browser in headless mode (no UI)")
+    parser.add_argument("--visible", "-v", action="store_true", dest="visible", default=False, help="Show browser UI for debugging")
+    parser.add_argument("--output", "-o", help="Output file path (default: duome_raw_<username>_<timestamp>.json)")
+    parser.add_argument("--debug-click", "-d", action="store_true", help="Debug mode: just attempt update click and show browser")
     
     args = parser.parse_args()
     
-    use_automation = not args.no_automation
-    headless = not args.show_browser
+    # Special debug mode just for diagnosing update click issue
+    if args.debug_click:
+        print("🔍 Running in debug mode - browser will be visible")
+        print("👀 Observe what happens when clicking the update button")
+        # Force visible browser in debug mode
+        page_source = fetch_duome_data_with_update(args.username, headless=False)
+        if page_source:
+            print("✅ Page loaded successfully")
+            print("🔎 Checking for direct URL parameters that might force a refresh...")
+            
+            # Try direct update URL - some sites have parameters that force refresh
+            try:
+                direct_url = f"https://duome.eu/{args.username}?update=true"
+                print(f"Trying direct URL: {direct_url}")
+                response = requests.get(direct_url, headers={
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml'
+                })
+                
+                if response.status_code == 200:
+                    print("✅ Direct URL request successful!")
+                    
+                    # Check if timestamp changed
+                    import re
+                    timestamp_match = re.search(r"Last update: ([\d\-:\s]+GMT[\+\-]\d)", response.text)
+                    if timestamp_match:
+                        print(f"⏰ Timestamp from direct URL: {timestamp_match.group(1)}")
+                    else:
+                        print("⚠️ Could not find timestamp in response")
+                else:
+                    print(f"❌ Direct URL request failed: {response.status_code}")
+            except Exception as e:
+                print(f"⚠️ Error trying direct URL: {e}")
+        
+        return
+        
+    # Normal operation mode
+    data = scrape_duome(args.username, use_automation=not args.no_automation, headless=not args.visible)
     
-    result = scrape_duome(args.username, use_automation, headless)
-    if result:
-        print("\nScraping completed successfully!")
-    else:
-        print("Scraping failed!")
+    if not data:
+        print("❌ Failed to gather data")
+        return
+        
+    # Generate default output filename if not specified
+    if not args.output:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        args.output = f"duome_raw_{args.username}_{timestamp}.json"
+    
+    # Write data to JSON file
+    with open(args.output, 'w') as f:
+        json.dump(data, f, indent=2)
+    
+    print(f"✅ Data saved to {args.output}")
+    
+    print("\nScraping completed successfully!")
 
 if __name__ == "__main__":
-    main() 
+    main()
