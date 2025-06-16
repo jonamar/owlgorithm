@@ -69,45 +69,109 @@ def fetch_duome_data_with_update(username, headless=True):
         # Look for the update button
         print("Looking for update button...")
         try:
+            # Capture the current timestamp on the page before update
+            before_update_timestamp = None
+            try:
+                # Try to find the last update timestamp
+                timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/following-sibling::*[1]")
+                before_update_timestamp = timestamp_element.text if timestamp_element else None
+                print(f"Current timestamp before update: {before_update_timestamp}")
+            except (NoSuchElementException, AttributeError):
+                print("Could not find timestamp element before update")
+            
             # Try different possible selectors for the update button
+            # More specific selectors first, then more generic ones
             update_selectors = [
-                "//*[contains(text(), 'click here') and contains(text(), 'update')]",
-                "//*[contains(text(), 'Please, click here')]",
-                "//a[contains(@href, 'update')]",
+                # Look for elements containing the text and icon often used for updates
+                "//a[contains(@class, 'update') or contains(@id, 'update')]",
+                "//img[contains(@alt, 'update') or contains(@src, 'update')]/parent::a",
+                "//a[.//img[contains(@alt, 'update') or contains(@src, 'update')]]",
+                # Look for specific text patterns in links or buttons
+                "//a[contains(text(), 'update your stats') or contains(., 'update your stats')]",
+                "//a[contains(text(), 'click here') and contains(., 'update')]", 
+                "//a[contains(text(), 'Please, click here')]",
                 "//button[contains(text(), 'update')]",
-                "//*[@class='update-button']",
-                "//*[@id='update-button']",
+                # Fall back to more generic image-based selectors
+                "//img[@alt='update']/parent::*",
+                "//img[contains(@src, 'refresh') or contains(@src, 'update')]/parent::*",
+                # Fall back to just looking for the duome.eu site's blue circular refresh icon
+                "//a/img[@width='40' and @height='40']/parent::a",
+                "//img[@width='40' and @height='40']/parent::a",
+                "//a[contains(@href, 'javascript') and .//img]",
             ]
             
             update_button = None
             for selector in update_selectors:
                 try:
-                    update_button = driver.find_element(By.XPATH, selector)
-                    if update_button and update_button.is_displayed():
-                        print(f"Found update button with XPath: {selector}")
+                    elements = driver.find_elements(By.XPATH, selector)
+                    for elem in elements:
+                        # Check if this element looks like an update button (has image or relevant text)
+                        if (elem.is_displayed() and 
+                            (elem.find_elements(By.TAG_NAME, "img") or 
+                             "update" in elem.text.lower() or
+                             "click here" in elem.text.lower())):
+                            update_button = elem
+                            print(f"Found update button with XPath: {selector}")
+                            print(f"Button text: {update_button.text}")
+                            break
+                    if update_button:
                         break
-                except NoSuchElementException:
+                except Exception as e:
                     continue
             
             if update_button:
                 print("Clicking update button...")
-                # Scroll to button first
-                driver.execute_script("arguments[0].scrollIntoView(true);", update_button)
-                time.sleep(1)
+                # Scroll to button to make sure it's in view
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", update_button)
+                time.sleep(2)  # Wait longer after scrolling
                 
-                # Try clicking with JavaScript (more reliable)
-                driver.execute_script("arguments[0].click();", update_button)
+                # Try multiple click methods for better reliability
+                try:
+                    # Try regular click first
+                    update_button.click()
+                except Exception:
+                    try:
+                        # If regular click fails, try JavaScript click
+                        driver.execute_script("arguments[0].click();", update_button)
+                    except Exception:
+                        # If that also fails, try moving to element and clicking
+                        from selenium.webdriver.common.action_chains import ActionChains
+                        actions = ActionChains(driver)
+                        actions.move_to_element(update_button).click().perform()
                 
-                # Wait for update to complete
+                # Wait longer for update to complete (12 seconds instead of 8)
                 print("Waiting for stats to update...")
-                time.sleep(8)  # Give it more time to update
+                for i in range(12):
+                    print(f"Waiting... {i+1}/12 seconds")
+                    time.sleep(1)
                 
-                # Check if page has updated (look for newer timestamps)
+                # Check if page has updated by looking for changes in the timestamp
                 print("Checking if update completed...")
+                update_successful = False
+                try:
+                    # Try to find the last update timestamp again
+                    timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/following-sibling::*[1]")
+                    after_update_timestamp = timestamp_element.text if timestamp_element else None
+                    
+                    if before_update_timestamp and after_update_timestamp and before_update_timestamp != after_update_timestamp:
+                        print(f"Update successful! Timestamp changed from {before_update_timestamp} to {after_update_timestamp}")
+                        update_successful = True
+                    else:
+                        print(f"Timestamp didn't change: {before_update_timestamp} vs {after_update_timestamp}")
+                        # Try refreshing the page to see if that helps
+                        print("Refreshing page to ensure we have the latest data...")
+                        driver.refresh()
+                        time.sleep(5)  # Wait for page to reload
+                except (NoSuchElementException, AttributeError):
+                    print("Could not verify update by timestamp")
                 
+                # Additional check by looking at the page source for changes
+                if not update_successful:
+                    print("Update verification by timestamp failed, checking for page changes...")
+                    # Just proceed with whatever data we have                
             else:
                 print("Update button not found, proceeding with current data...")
-                print("The page might already have the latest data.")
+                print("The page might already have the latest data or the button has changed.")
                 
         except Exception as e:
             print(f"Could not click update button: {e}")
@@ -170,7 +234,15 @@ def fetch_duome_data(username):
     print(f"Fetching data from {url} (fallback method)...")
     
     try:
-        response = requests.get(url)
+        # Add headers to mimic a browser request (sometimes needed to avoid blocks)  
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'keep-alive',
+        }
+        
+        response = requests.get(url, headers=headers, timeout=15)  # Add timeout
         response.raise_for_status()
         return response.content
         

@@ -74,12 +74,32 @@ def get_newly_completed_units(json_data, state_data):
         for session in json_data.get('sessions', [])
         if session.get('is_unit_completion') and session.get('unit')
     }
-
+    
+    # Also identify session data from the latest scrape
+    json_session_dates = {
+        session['datetime'][:10]  # Extract just the date part
+        for session in json_data.get('sessions', [])
+        if session.get('datetime')
+    }
+    
     # Get units we have already processed
     processed_units = set(state_data.get('processed_units', []))
-
+    
+    # Get the last scrape date we processed
+    last_scrape_date = state_data.get('last_scrape_date', None)
+    
+    # Check if we have any new sessions since the last scrape
+    has_new_sessions = False
+    if last_scrape_date:
+        latest_session_date = max(json_session_dates) if json_session_dates else None
+        if latest_session_date and latest_session_date > last_scrape_date:
+            print(f"✨ Found new sessions since last scrape! Latest: {latest_session_date}, Last processed: {last_scrape_date}")
+            has_new_sessions = True
+    
     newly_completed = completed_in_json - processed_units
-    return newly_completed, completed_in_json
+    
+    # If we have new completed units or new session data, let's update
+    return newly_completed, completed_in_json, has_new_sessions
 
 def update_markdown_file(newly_completed_count, total_lessons_completed, content):
     """Reads, updates, and writes the personal-math.md file."""
@@ -140,28 +160,51 @@ def main():
             state_data = json.load(f)
 
     # Check for changes
-    newly_completed, all_completed_in_json = get_newly_completed_units(json_data, state_data)
+    newly_completed, all_completed_in_json, has_new_sessions = get_newly_completed_units(json_data, state_data)
+    
+    # Get the current scrape timestamp
+    current_scrape_date = json_data.get('scraped_at', datetime.now().isoformat())[:10]  # Keep just the date part
+    
     new_total_lessons = json_data.get('total_lessons_completed', 0)
     old_total_lessons = state_data.get('total_lessons_completed', 0)
 
+    # Detect changes in various ways
     has_new_units = bool(newly_completed)
     has_new_lessons = new_total_lessons != old_total_lessons
+    
+    # Force update if scraping timestamp has changed significantly (new day)
+    last_scrape_date = state_data.get('last_scrape_date', '')
+    force_update = current_scrape_date != last_scrape_date
+    
+    # Log what's happening
+    print(f"🔍 Checking for changes...")
+    print(f"   - New units completed: {'Yes' if has_new_units else 'No'}")
+    print(f"   - New lessons count: {'Yes' if has_new_lessons else 'No'} ({old_total_lessons} → {new_total_lessons})")
+    print(f"   - New sessions detected: {'Yes' if has_new_sessions else 'No'}")
+    print(f"   - Last scrape date: {last_scrape_date}, Current: {current_scrape_date}")
 
     # Initialize Pushover notifier
     notifier = PushoverNotifier()
 
-    if has_new_units or has_new_lessons:
+    # Decide whether to update based on new units, new lessons, new sessions or force update
+    if has_new_units or has_new_lessons or has_new_sessions or force_update:
+        print(f"🔄 Changes detected, updating tracker data...")
+        
         with open(MARKDOWN_FILE, 'r') as f:
             content = f.read()
             
         success = update_markdown_file(len(newly_completed), new_total_lessons, content)
         
         if success:
+            # Update the state file with ALL new information
             state_data['processed_units'] = list(all_completed_in_json)
             state_data['total_lessons_completed'] = new_total_lessons
+            state_data['last_scrape_date'] = current_scrape_date
+            state_data['last_update_timestamp'] = datetime.now().isoformat()
+            
             with open(STATE_FILE, 'w') as f:
                 json.dump(state_data, f, indent=2)
-            print(f"✅ State file '{STATE_FILE}' updated.")
+            print(f"✅ State file '{STATE_FILE}' updated with latest data.")
             
             # Send push notification with updated progress
             if notifier.is_enabled():
@@ -176,34 +219,31 @@ def main():
                 minutes = int(time_per_day_required_mins % 60)
                 time_per_day_str = f"~{hours}h {minutes}m"
                 
-                notifier.send_daily_update(
-                    newly_completed_units=new_completed_units,
-                    total_lessons=new_total_lessons,
-                    lessons_per_day_required=lessons_per_day_required,
-                    time_per_day_required=time_per_day_str
-                )
+                # If we have new units, highlight that in the notification
+                if has_new_units:
+                    notifier.send_daily_update(
+                        newly_completed_units=len(newly_completed),
+                        total_lessons=new_total_lessons,
+                        lessons_per_day_required=lessons_per_day_required,
+                        time_per_day_required=time_per_day_str
+                    )
+                # Otherwise just show updated metrics
+                else:
+                    notifier.send_daily_update(
+                        newly_completed_units=0,  # No new completed units
+                        total_lessons=new_total_lessons,
+                        lessons_per_day_required=lessons_per_day_required,
+                        time_per_day_required=time_per_day_str
+                    )
+        else:
+            print("❌ Failed to update markdown file.")
     else:
-        print("✅ No new units or lessons completed since last check. No updates needed.")
+        print("✅ No changes detected since last check. No updates needed.")
         
-        # Send daily check notification even if no progress (optional)
-        if notifier.is_enabled():
-            # Calculate current metrics
-            completed_units = len(all_completed_in_json)
-            remaining_units = TOTAL_UNITS_IN_COURSE - completed_units
-            total_lessons_remaining = remaining_units * BASE_LESSONS_PER_UNIT
-            lessons_per_day_required = total_lessons_remaining / GOAL_DAYS
-            time_per_day_required_mins = lessons_per_day_required * BASE_MINS_PER_LESSON
-            
-            hours = int(time_per_day_required_mins // 60)
-            minutes = int(time_per_day_required_mins % 60)
-            time_per_day_str = f"~{hours}h {minutes}m"
-            
-            notifier.send_daily_update(
-                newly_completed_units=0,
-                total_lessons=new_total_lessons,
-                lessons_per_day_required=lessons_per_day_required,
-                time_per_day_required=time_per_day_str
-            )
+        # Even if no changes, we should update the last scrape date
+        state_data['last_scrape_date'] = current_scrape_date
+        with open(STATE_FILE, 'w') as f:
+            json.dump(state_data, f, indent=2)
 
 if __name__ == "__main__":
     main() 
