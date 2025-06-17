@@ -25,10 +25,9 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 def fetch_duome_data_with_update(username, headless=True):
     """Fetch raw data from duome.eu with automatic stats update"""
-    # Use direct URL with update parameter for more reliable updates
+    # Use standard URL and rely on button click for updates
     url = f"https://duome.eu/{username}"
-    update_url = f"https://duome.eu/{username}?update=true"
-    print(f"Opening browser and navigating to {update_url} (with auto-update)...")
+    print(f"Opening browser and navigating to {url}...")
     
     driver = None
     try:
@@ -59,9 +58,9 @@ def fetch_duome_data_with_update(username, headless=True):
             print("For Safari: Run 'sudo safaridriver --enable' in terminal")
             return None
         
-        # Navigate to the page with update parameter
-        driver.get(update_url)
-        print("Navigated to page with update parameter - stats should be refreshed automatically")
+        # Navigate to the standard page
+        driver.get(url)
+        print("Navigated to duome.eu page")
         
         # Wait for page to load and update to complete
         print("Waiting for page to load and stats to update...")
@@ -78,7 +77,7 @@ def fetch_duome_data_with_update(username, headless=True):
         except (NoSuchElementException, AttributeError):
             print("Could not find timestamp element before update")
             
-        # Try to find and click the specific update button even if we used ?update=true
+        # Try to find and click the specific update button
         print("Looking for the aggiorna update element...")
         update_clicked = False
         
@@ -118,7 +117,7 @@ def fetch_duome_data_with_update(username, headless=True):
         
         if not update_clicked:
             print("Update button not found or not clickable")
-            print("Proceeding with current data loaded from ?update=true URL")
+            print("Proceeding with current page data")
             
         # Give additional time for the update to complete
         print("Allowing time for stats update to complete...")
@@ -365,6 +364,14 @@ def calculate_daily_stats(sessions):
     # Convert to regular dict and sort by date
     return dict(sorted(daily_stats.items(), reverse=True))
 
+def calculate_total_lessons(sessions):
+    """Compute total lessons from session data"""
+    total_lessons = 0
+    for session in sessions:
+        if session['is_lesson']:
+            total_lessons += 1
+    return total_lessons
+
 def calculate_unit_stats(sessions):
     """Calculate unit-specific lesson and practice statistics"""
     unit_stats = defaultdict(lambda: {
@@ -427,16 +434,16 @@ def scrape_duome(username, use_automation=True, headless=True):
 
     soup = BeautifulSoup(html_content, 'html.parser')
     
-    # --- New: Parse main stats for total lesson count ---
-    total_lessons_completed = 0
+    # --- Parse main stats for reference (known to be unreliable) ---
+    duome_reported_lessons = 0
     try:
         stats_text = soup.get_text()
         lessons_match = re.search(r"Lessons:\s*([\d,]+)", stats_text)
         if lessons_match:
-            total_lessons_completed = int(lessons_match.group(1).replace(',', ''))
-            print(f"📊 Found total lessons completed: {total_lessons_completed}")
+            duome_reported_lessons = int(lessons_match.group(1).replace(',', ''))
+            print(f"📊 Duome reports lessons completed: {duome_reported_lessons} (unreliable)")
     except Exception as e:
-        print(f"⚠️ Could not parse total lessons count: {e}")
+        print(f"⚠️ Could not parse duome lessons count: {e}")
 
     # --- Parse session data from raw div ---
     raw_div = soup.find('div', {'id': 'raw'})
@@ -456,11 +463,20 @@ def scrape_duome(username, use_automation=True, headless=True):
     daily_stats = calculate_daily_stats(sessions)
     unit_stats = calculate_unit_stats(sessions)
     
+    # Compute accurate totals from session data
+    computed_lessons = sum(1 for s in sessions if s.get('is_lesson', False))
+    computed_practice = sum(1 for s in sessions if not s.get('is_lesson', False))
+    computed_total = computed_lessons + computed_practice
+    print(f"📊 Computed from sessions: {computed_lessons} lessons + {computed_practice} practice = {computed_total} total")
+    
     # Prepare output data
     output_data = {
         'username': username,
         'scraped_at': datetime.now().isoformat(),
-        'total_lessons_completed': total_lessons_completed,
+        'duome_reported_lessons': duome_reported_lessons,  # Keep for reference but don't rely on this
+        'computed_lesson_count': computed_lessons,
+        'computed_practice_count': computed_practice,
+        'computed_total_sessions': computed_total,
         'total_sessions': len(sessions),
         'sessions': sessions,
         'daily_stats': daily_stats,
@@ -509,45 +525,8 @@ def main():
     parser.add_argument("--headless", "-l", action="store_false", dest="visible", help="Run browser in headless mode (no UI)")
     parser.add_argument("--visible", "-v", action="store_true", dest="visible", default=False, help="Show browser UI for debugging")
     parser.add_argument("--output", "-o", help="Output file path (default: duome_raw_<username>_<timestamp>.json)")
-    parser.add_argument("--debug-click", "-d", action="store_true", help="Debug mode: just attempt update click and show browser")
     
     args = parser.parse_args()
-    
-    # Special debug mode just for diagnosing update click issue
-    if args.debug_click:
-        print("🔍 Running in debug mode - browser will be visible")
-        print("👀 Observe what happens when clicking the update button")
-        # Force visible browser in debug mode
-        page_source = fetch_duome_data_with_update(args.username, headless=False)
-        if page_source:
-            print("✅ Page loaded successfully")
-            print("🔎 Checking for direct URL parameters that might force a refresh...")
-            
-            # Try direct update URL - some sites have parameters that force refresh
-            try:
-                direct_url = f"https://duome.eu/{args.username}?update=true"
-                print(f"Trying direct URL: {direct_url}")
-                response = requests.get(direct_url, headers={
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml'
-                })
-                
-                if response.status_code == 200:
-                    print("✅ Direct URL request successful!")
-                    
-                    # Check if timestamp changed
-                    import re
-                    timestamp_match = re.search(r"Last update: ([\d\-:\s]+GMT[\+\-]\d)", response.text)
-                    if timestamp_match:
-                        print(f"⏰ Timestamp from direct URL: {timestamp_match.group(1)}")
-                    else:
-                        print("⚠️ Could not find timestamp in response")
-                else:
-                    print(f"❌ Direct URL request failed: {response.status_code}")
-            except Exception as e:
-                print(f"⚠️ Error trying direct URL: {e}")
-        
-        return
         
     # Normal operation mode
     data = scrape_duome(args.username, use_automation=not args.no_automation, headless=not args.visible)

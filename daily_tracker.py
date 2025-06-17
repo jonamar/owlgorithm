@@ -101,8 +101,16 @@ def get_newly_completed_units(json_data, state_data):
     # If we have new completed units or new session data, let's update
     return newly_completed, completed_in_json, has_new_sessions
 
-def update_markdown_file(newly_completed_count, total_lessons_completed, content):
-    """Reads, updates, and writes the personal-math.md file."""
+def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None):
+    """Reads, updates, and writes the personal-math.md file.
+    
+    Args:
+        newly_completed_count: Number of newly completed units
+        total_lessons_count: Total lessons and practice sessions completed
+        content: Content of the markdown file
+        core_lessons: Optional number of core lessons (without practice)
+        practice_sessions: Optional number of practice sessions
+    """
     print(f"📈 Updating stats...")
     
     # --- Read existing values ---
@@ -140,7 +148,21 @@ def update_markdown_file(newly_completed_count, total_lessons_completed, content
     # --- Update content with new values ---
     content = re.sub(r"(Completed Units:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
     content = re.sub(r"(Remaining Units:\s*)(\d+)", rf"\g<1>{new_remaining_units}", content)
-    content = re.sub(r"(Total Lessons Completed:\s*)(\d+)", rf"\g<1>{total_lessons_completed}", content)
+    
+    # Update total lessons with computed totals
+    content = re.sub(r"(Total Lessons Completed:\s*)(\d+)", rf"\g<1>{total_lessons_count}", content)
+    
+    # Add detail about core lessons vs practice (if available)
+    if core_lessons is not None and practice_sessions is not None:
+        # Check if we already have a breakdown line, if so update it
+        if re.search(r"\(Core: \d+, Practice: \d+\)", content):
+            content = re.sub(r"\(Core: \d+, Practice: \d+\)", 
+                          f"(Core: {core_lessons}, Practice: {practice_sessions})", content)
+        else:
+            # Insert after the Total Lessons Completed line
+            content = re.sub(r"(Total Lessons Completed:\s*\d+)\s*", 
+                          f"\\1 (Core: {core_lessons}, Practice: {practice_sessions})\n", content)
+    
     content = re.sub(r"(Total Lessons Remaining:\s*)~?[\d,]+", rf"\g<1>~{total_lessons_remaining:,.0f}", content)
     content = re.sub(r"(Lessons Per Day Required:\s*)\*\*~?[\d.]+\*\*", rf"\g<1>**~{lessons_per_day_required:.1f} lessons**", content)
     content = re.sub(r"(Time Per Day Required:\s*)\*\*~?[\w\s]+\*\*", rf"\g<1>**{time_per_day_str}**", content)
@@ -152,7 +174,12 @@ def update_markdown_file(newly_completed_count, total_lessons_completed, content
     print(f"✅ Successfully updated {MARKDOWN_FILE}.")
     if newly_completed_count > 0:
         print(f"   - Newly Completed Units: {newly_completed_count}")
-    print(f"   - Total Lessons Completed: {total_lessons_completed}")
+    
+    # Show detailed breakdown of lessons
+    if core_lessons is not None and practice_sessions is not None:
+        print(f"   - Total Sessions: {total_lessons_count} (Core: {core_lessons}, Practice: {practice_sessions})")
+    else:
+        print(f"   - Total Sessions: {total_lessons_count}")
     return True
 
 def main():
@@ -179,14 +206,24 @@ def main():
     # Get the current scrape timestamp
     current_scrape_date = json_data.get('scraped_at', datetime.now().isoformat())[:10]  # Keep just the date part
     
-    new_total_lessons = json_data.get('total_lessons_completed', 0)
-    old_total_lessons = state_data.get('total_lessons_completed', 0)
+    # Switch to computed totals (more accurate than duome's reported lessons)
+    new_total_lessons = json_data.get('computed_total_sessions', 0)  # Use computed_total_sessions (lessons + practice)
+    new_core_lessons = json_data.get('computed_lesson_count', 0)  # Core lessons only
+    new_practice_sessions = json_data.get('computed_practice_count', 0)  # Practice sessions only
+    
+    # Track both old metrics for backwards compatibility
+    old_total_lessons = state_data.get('total_lessons_completed', 0)  # Legacy field
+    old_computed_total = state_data.get('computed_total_sessions', 0)  # New computed field
 
     # Detect changes in various ways
     has_new_units = bool(newly_completed)
-    has_new_lessons = new_total_lessons != old_total_lessons
+    has_new_lessons = new_total_lessons > old_total_lessons or new_total_lessons > old_computed_total
     
-    # Force update if scraping timestamp has changed significantly (new day)
+    # Log information about the lessons
+    if new_total_lessons > old_computed_total:
+        new_sessions = new_total_lessons - old_computed_total
+        print(f"🆕 Found {new_sessions} new sessions! ({new_core_lessons} lessons, {new_practice_sessions} practice)")
+    
     last_scrape_date = state_data.get('last_scrape_date', '')
     force_update = current_scrape_date != last_scrape_date
     
@@ -204,18 +241,32 @@ def main():
     if has_new_units or has_new_lessons or has_new_sessions or force_update:
         print(f"🔄 Changes detected, updating tracker data...")
         
+        # Get markdown content
         with open(MARKDOWN_FILE, 'r') as f:
             content = f.read()
             
-        success = update_markdown_file(len(newly_completed), new_total_lessons, content)
+        # Now pass all computed metrics to the markdown update function
+        success = update_markdown_file(
+            newly_completed_count=len(newly_completed), 
+            total_lessons_count=new_total_lessons, 
+            content=content,
+            core_lessons=new_core_lessons,
+            practice_sessions=new_practice_sessions
+        )
         
         if success:
-            # Update the state file with ALL new information
+            # Save state to avoid re-processing
             state_data['processed_units'] = list(all_completed_in_json)
-            state_data['total_lessons_completed'] = new_total_lessons
-            state_data['last_scrape_date'] = current_scrape_date
-            state_data['last_update_timestamp'] = datetime.now().isoformat()
             
+            # Update with computed metrics (more reliable than duome.eu reported lessons)
+            state_data['computed_total_sessions'] = new_total_lessons
+            state_data['computed_lesson_count'] = new_core_lessons
+            state_data['computed_practice_count'] = new_practice_sessions
+            state_data['total_lessons_completed'] = new_total_lessons  # Legacy field, now using computed total
+            
+            state_data['last_scrape_date'] = current_scrape_date
+            
+            # Write the updated state back to disk
             with open(STATE_FILE, 'w') as f:
                 json.dump(state_data, f, indent=2)
             print(f"✅ State file '{STATE_FILE}' updated with latest data.")
