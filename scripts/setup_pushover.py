@@ -4,7 +4,9 @@ Pushover Setup Script
 Interactive setup for Pushover notifications in the Duolingo tracker.
 """
 
-from pushover_notifier import PushoverNotifier
+import os, sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+from notifiers.pushover_notifier import PushoverNotifier
 
 def main():
     """Interactive setup for Pushover credentials."""

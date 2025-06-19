@@ -65,9 +65,10 @@ class DailyDuolingoTracker:
     def run_scraper(self):
         """Run the duome scraper"""
         try:
+            scraper_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scrapers', 'duome_raw_scraper.py'))
             cmd = [
-                sys.executable, 
-                "duome_raw_scraper.py",
+                sys.executable,
+                scraper_path,
                 "--username", self.username,
                 "--output", os.path.join(self.data_dir, f"{self.username}_data.json"),
                 "--no-automation"

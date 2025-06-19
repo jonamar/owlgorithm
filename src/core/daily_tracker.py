@@ -9,9 +9,13 @@ import os
 import json
 import re
 import subprocess
+import sys
+
+# Allow importing sibling packages when run as script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import glob
 from datetime import datetime
-from pushover_notifier import PushoverNotifier
+from notifiers.pushover_notifier import PushoverNotifier
 
 # --- Configuration ---
 MARKDOWN_FILE = 'personal-math.md'
@@ -37,7 +41,7 @@ def run_scraper():
 
         # Run the scraper script
         subprocess.run(
-            [venv_python, 'duome_raw_scraper.py', '--username', USERNAME],
+            [venv_python, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scrapers', 'duome_raw_scraper.py')), '--username', USERNAME],
             check=True,
             capture_output=True,
             text=True
