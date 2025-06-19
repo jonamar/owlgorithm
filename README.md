@@ -24,9 +24,15 @@ source duolingo_env/bin/activate  # On Windows: duolingo_env\Scripts\activate
 pip install selenium requests beautifulsoup4 argparse
 ```
 
-### 3. Run the Tracker
+### 3. Project Setup (one-time)
 ```bash
-./run_tracker.sh  # On Windows: create a batch file or run: python daily_tracker.py
+python scripts/setup.py --all   # checks deps, creates folders, configures notifications
+```
+
+### 4. Run Daily Update
+```bash
+python scripts/daily_update.py
+# optional: -u <username>
 ```
 
 ## 📊 What Data You Get
@@ -76,7 +82,7 @@ After running the tracker, you'll get:
 ### macOS/Linux (cron)
 ```bash
 # Add to crontab for daily automatic refresh and tracking
-0 23 * * * cd /path/to/owlgorithm && ./run_tracker.sh
+0 23 * * * cd /path/to/owlgorithm && /usr/bin/python3 scripts/daily_update.py
 ```
 
 ### Windows (Task Scheduler)
