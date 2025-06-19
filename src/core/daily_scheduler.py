@@ -34,10 +34,16 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import argparse
+
+# Adjust path to import config when run as script
+current_dir = os.path.dirname(__file__)
+sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))
+sys.path.append(os.path.abspath(os.path.join(current_dir, '..', '..')))
+from config import app_config as cfg
 import json
 
 class DailyDuolingoTracker:
-    def __init__(self, username, data_dir="duolingo_data", email=None):
+    def __init__(self, username, data_dir=cfg.DATA_DIR, email=None):
         self.username = username
         self.data_dir = data_dir
         self.email = email
@@ -247,7 +253,7 @@ def setup_cron_job(username, script_path=None):
 def main():
     parser = argparse.ArgumentParser(description='Daily Duolingo progress tracker using duome.eu')
     parser.add_argument('--username', '-u', required=True, help='Duolingo username')
-    parser.add_argument('--data-dir', '-d', default='duolingo_data', help='Data directory')
+    parser.add_argument('--data-dir', '-d', default=cfg.DATA_DIR, help='Data directory')
     parser.add_argument('--email', '-e', help='Email for progress reports')
     parser.add_argument('--setup-cron', action='store_true', help='Show cron setup instructions')
     
@@ -272,5 +278,4 @@ def main():
     print(f"   • Check your data: ls -la {args.data_dir}/")
     print(f"   • View profile at: https://duome.eu/{args.username}")
 
-if __name__ == "__main__":
-    main() 
+ 

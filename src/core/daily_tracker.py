@@ -317,5 +317,4 @@ def main():
         with open(STATE_FILE, 'w') as f:
             json.dump(state_data, f, indent=2)
 
-if __name__ == "__main__":
-    main() 
+ 
