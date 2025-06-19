@@ -31,8 +31,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import logging
 import smtplib
-from email.mime.text import MimeText
-from email.mime.multipart import MimeMultipart
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import argparse
 import json
 
@@ -67,10 +67,10 @@ class DailyDuolingoTracker:
         try:
             cmd = [
                 sys.executable, 
-                "duome_scraper.py",
+                "duome_raw_scraper.py",
                 "--username", self.username,
-                "--output", os.path.join(self.data_dir, f"{self.username}_data.csv"),
-                "--delay", "2"
+                "--output", os.path.join(self.data_dir, f"{self.username}_data.json"),
+                "--no-automation"
             ]
             
             self.logger.info(f"Running duome scraper for {self.username}")
