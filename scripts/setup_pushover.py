@@ -5,7 +5,9 @@ Interactive setup for Pushover notifications in the Duolingo tracker.
 """
 
 import os, sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+current_dir = os.path.dirname(__file__)
+sys.path.append(os.path.abspath(os.path.join(current_dir, 'src')))
+sys.path.append(os.path.abspath(os.path.join(current_dir)))
 from notifiers.pushover_notifier import PushoverNotifier
 
 def main():

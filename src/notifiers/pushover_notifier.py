@@ -7,13 +7,16 @@ Handles sending push notifications via Pushover API for Duolingo progress update
 import os
 import json
 import requests
+from config import app_config as cfg
 from datetime import datetime
 
 class PushoverNotifier:
     """Handles Pushover API notifications."""
     
-    def __init__(self, config_file='pushover_config.json'):
-        """Initialize with configuration file."""
+    def __init__(self, config_file: str | None = None):
+        """Initialize notifier; config path comes from central config unless overridden."""
+        if config_file is None:
+            config_file = cfg.NOTIFIER_CONFIG_FILE
         self.config_file = config_file
         self.config = self._load_config()
         

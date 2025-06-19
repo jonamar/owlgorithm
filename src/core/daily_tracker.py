@@ -11,23 +11,26 @@ import re
 import subprocess
 import sys
 
-# Allow importing sibling packages when run as script
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Adjust Python path to import sibling and project-level packages
+current_dir = os.path.dirname(__file__)
+sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))      # /src
+sys.path.append(os.path.abspath(os.path.join(current_dir, '..', '..')))  # project root
 import glob
 from datetime import datetime
 from notifiers.pushover_notifier import PushoverNotifier
 
-# --- Configuration ---
-MARKDOWN_FILE = 'personal-math.md'
-STATE_FILE = 'tracker_state.json'
-USERNAME = 'jonamar'
-TOTAL_UNITS_IN_COURSE = 272
-GOAL_DAYS = 548  # 18 months
+# --- Configuration (centralised) ---
+from config import app_config as cfg
 
-# --- Baseline Metrics (from personal-math.md) ---
-# These are updated manually if a new, more accurate analysis is done.
-BASE_LESSONS_PER_UNIT = 31
-BASE_MINS_PER_LESSON = 7.5
+MARKDOWN_FILE = cfg.MARKDOWN_FILE
+STATE_FILE = cfg.STATE_FILE
+USERNAME = cfg.USERNAME
+TOTAL_UNITS_IN_COURSE = cfg.TOTAL_UNITS_IN_COURSE
+GOAL_DAYS = cfg.GOAL_DAYS  # 18 months
+
+# --- Baseline Metrics (from config) ---
+BASE_LESSONS_PER_UNIT = cfg.BASE_LESSONS_PER_UNIT
+BASE_MINS_PER_LESSON = cfg.BASE_MINS_PER_LESSON
 
 def run_scraper():
     """Runs the duome_raw_scraper.py script to get the latest data."""
