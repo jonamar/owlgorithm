@@ -61,7 +61,9 @@ def run_scraper():
 def find_latest_json_file():
     """Finds the most recently created JSON output file."""
     try:
-        list_of_files = glob.glob(f'duome_raw_{USERNAME}_*.json')
+        # Look for JSON files in the data directory
+        pattern = os.path.join(cfg.DATA_DIR, f'duome_raw_{USERNAME}_*.json')
+        list_of_files = glob.glob(pattern)
         if not list_of_files:
             return None
         latest_file = max(list_of_files, key=os.path.getctime)

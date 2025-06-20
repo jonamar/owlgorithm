@@ -484,9 +484,18 @@ def scrape_duome(username, use_automation=True, headless=True):
         'unit_transitions': {unit: dt.isoformat() for unit, dt in unit_transitions.items()}
     }
     
-    # Generate output filename
+    # Generate output filename in data directory
+    import os
+    import sys
+    # Add config to path if running as standalone script
+    if 'config' not in sys.modules:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+    from config import app_config as cfg
+    
+    data_dir = cfg.DATA_DIR
+    os.makedirs(data_dir, exist_ok=True)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_file = f"duome_raw_{username}_{timestamp}.json"
+    output_file = os.path.join(data_dir, f"duome_raw_{username}_{timestamp}.json")
     
     # Save to JSON
     try:
@@ -537,8 +546,17 @@ def main():
         
     # Generate default output filename if not specified
     if not args.output:
+        import os
+        import sys
+        # Add config to path if running as standalone script
+        if 'config' not in sys.modules:
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+        from config import app_config as cfg
+        
+        data_dir = cfg.DATA_DIR
+        os.makedirs(data_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        args.output = f"duome_raw_{args.username}_{timestamp}.json"
+        args.output = os.path.join(data_dir, f"duome_raw_{args.username}_{timestamp}.json")
     
     # Write data to JSON file
     with open(args.output, 'w') as f:
