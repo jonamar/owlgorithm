@@ -32,6 +32,126 @@ GOAL_DAYS = cfg.GOAL_DAYS  # 18 months
 BASE_LESSONS_PER_UNIT = cfg.BASE_LESSONS_PER_UNIT
 BASE_MINS_PER_LESSON = cfg.BASE_MINS_PER_LESSON
 
+def get_current_date():
+    """Get current date as YYYY-MM-DD string."""
+    return datetime.now().strftime('%Y-%m-%d')
+
+def get_current_time_slot():
+    """Determine current time slot for notifications."""
+    hour = datetime.now().hour
+    
+    if 5 <= hour < 11:
+        return 'morning'
+    elif 11 <= hour < 16:
+        return 'midday'
+    elif 16 <= hour < 21:
+        return 'evening'
+    else:
+        return 'night'
+
+def reset_daily_lessons_if_needed(state_data):
+    """Reset daily lesson counters if it's a new day."""
+    current_date = get_current_date()
+    last_daily_reset = state_data.get('last_daily_reset', '')
+    
+    if current_date != last_daily_reset:
+        # Reset daily counters
+        state_data['daily_lessons_completed'] = 0
+        state_data['daily_goal_lessons'] = calculate_daily_lesson_goal(state_data)
+        state_data['last_daily_reset'] = current_date
+        print(f"🌅 New day detected! Reset daily counters for {current_date}")
+        return True, state_data
+    
+    return False, state_data
+
+def calculate_daily_lesson_goal(state_data):
+    """Calculate how many lessons should be completed per day."""
+    # Get current progress
+    total_completed_units = len(state_data.get('processed_units', []))
+    remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
+    total_lessons_remaining = remaining_units * BASE_LESSONS_PER_UNIT
+    
+    # Calculate daily goal
+    lessons_per_day = total_lessons_remaining / GOAL_DAYS
+    return max(1, round(lessons_per_day))  # At least 1 lesson per day
+
+def calculate_daily_progress(state_data):
+    """Calculate daily progress statistics."""
+    daily_completed = state_data.get('daily_lessons_completed', 0)
+    daily_goal = state_data.get('daily_goal_lessons', 1)
+    
+    progress_pct = (daily_completed / daily_goal) * 100 if daily_goal > 0 else 0
+    lessons_remaining = max(0, daily_goal - daily_completed)
+    
+    # Determine status
+    if daily_completed >= daily_goal:
+        status = 'ahead' if daily_completed > daily_goal else 'on_track'
+    elif daily_completed >= daily_goal * 0.8:
+        status = 'close'
+    else:
+        status = 'behind'
+    
+    return {
+        'completed': daily_completed,
+        'goal': daily_goal,
+        'remaining': lessons_remaining,
+        'progress_pct': progress_pct,
+        'status': status
+    }
+
+def send_time_based_notification(notifier, time_slot, state_data, has_new_lessons, has_new_units, units_completed):
+    """Send appropriate notification based on current time slot."""
+    daily_progress = calculate_daily_progress(state_data)
+    
+    # Get overall trajectory info
+    total_completed_units = len(state_data.get('processed_units', []))
+    total_progress_pct = (total_completed_units / TOTAL_UNITS_IN_COURSE) * 100
+    trajectory_info = {'progress_pct': total_progress_pct}
+    
+    # Determine if we should send notification based on time slot and activity
+    should_send = False
+    
+    if time_slot == 'morning':
+        # Morning: Always send goal-setting message  
+        should_send = True
+        # Get yesterday's progress if available
+        yesterday_progress = state_data.get('yesterday_progress')
+        current_streak = 30  # TODO: Get from scraper data if available
+        notifier.send_morning_notification(
+            daily_goal=daily_progress['goal'],
+            current_streak=current_streak,
+            yesterday_progress=yesterday_progress
+        )
+        
+    elif time_slot == 'midday':
+        # Midday: Send only if activity detected OR significantly behind
+        should_send = has_new_lessons or daily_progress['status'] == 'behind'
+        if should_send:
+            notifier.send_midday_notification(daily_progress)
+            
+    elif time_slot == 'evening':
+        # Evening: Send only if activity detected OR behind goal
+        should_send = has_new_lessons or daily_progress['status'] in ['behind', 'close']
+        if should_send:
+            notifier.send_evening_notification(daily_progress)
+            
+    elif time_slot == 'night':
+        # Night: Always send recap
+        should_send = True
+        notifier.send_night_notification(
+            daily_progress=daily_progress,
+            units_completed=units_completed,
+            trajectory_info=trajectory_info
+        )
+        
+        # Save today's progress as yesterday's for tomorrow morning
+        state_data['yesterday_progress'] = daily_progress.copy()
+    
+    if should_send:
+        print(f"📱 Sent {time_slot} notification")
+    else:
+        print(f"⏭️  Skipped {time_slot} notification - no activity detected")
+
 def run_scraper():
     """Runs the duome_raw_scraper.py script to get the latest data."""
     print("🚀 Starting scraper to fetch latest data...")
@@ -209,6 +329,12 @@ def main():
         with open(STATE_FILE, 'r') as f:
             state_data = json.load(f)
 
+    # Handle daily lesson tracking
+    daily_reset_occurred, state_data = reset_daily_lessons_if_needed(state_data)
+    current_time_slot = get_current_time_slot()
+    
+    print(f"🕐 Current time slot: {current_time_slot}")
+
     # Check for changes
     newly_completed, all_completed_in_json, has_new_sessions = get_newly_completed_units(json_data, state_data)
     
@@ -228,10 +354,13 @@ def main():
     has_new_units = bool(newly_completed)
     has_new_lessons = new_total_lessons > old_total_lessons or new_total_lessons > old_computed_total
     
-    # Log information about the lessons
+    # Update daily lesson counter
     if new_total_lessons > old_computed_total:
-        new_sessions = new_total_lessons - old_computed_total
-        print(f"🆕 Found {new_sessions} new sessions! ({new_core_lessons} lessons, {new_practice_sessions} practice)")
+        new_daily_lessons = new_total_lessons - old_computed_total
+        current_daily_lessons = state_data.get('daily_lessons_completed', 0)
+        state_data['daily_lessons_completed'] = current_daily_lessons + new_daily_lessons
+        print(f"🆕 Found {new_daily_lessons} new sessions today! Total today: {state_data['daily_lessons_completed']}")
+        print(f"   - Breakdown: {new_core_lessons} total lessons, {new_practice_sessions} total practice")
     
     last_scrape_date = state_data.get('last_scrape_date', '')
     force_update = current_scrape_date != last_scrape_date
@@ -280,35 +409,12 @@ def main():
                 json.dump(state_data, f, indent=2)
             print(f"✅ State file '{STATE_FILE}' updated with latest data.")
             
-            # Send push notification with updated progress
+            # Send time-based notifications
             if notifier.is_enabled():
-                # Calculate current metrics for notification
-                new_completed_units = len(newly_completed)
-                new_remaining_units = TOTAL_UNITS_IN_COURSE - len(all_completed_in_json)
-                total_lessons_remaining = new_remaining_units * BASE_LESSONS_PER_UNIT
-                lessons_per_day_required = total_lessons_remaining / GOAL_DAYS
-                time_per_day_required_mins = lessons_per_day_required * BASE_MINS_PER_LESSON
-                
-                hours = int(time_per_day_required_mins // 60)
-                minutes = int(time_per_day_required_mins % 60)
-                time_per_day_str = f"~{hours}h {minutes}m"
-                
-                # If we have new units, highlight that in the notification
-                if has_new_units:
-                    notifier.send_daily_update(
-                        newly_completed_units=len(newly_completed),
-                        total_lessons=new_total_lessons,
-                        lessons_per_day_required=lessons_per_day_required,
-                        time_per_day_required=time_per_day_str
-                    )
-                # Otherwise just show updated metrics
-                else:
-                    notifier.send_daily_update(
-                        newly_completed_units=0,  # No new completed units
-                        total_lessons=new_total_lessons,
-                        lessons_per_day_required=lessons_per_day_required,
-                        time_per_day_required=time_per_day_str
-                    )
+                send_time_based_notification(
+                    notifier, current_time_slot, state_data, 
+                    has_new_lessons, has_new_units, len(newly_completed)
+                )
         else:
             print("❌ Failed to update markdown file.")
     else:

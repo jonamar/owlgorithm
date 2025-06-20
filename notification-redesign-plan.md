@@ -22,23 +22,23 @@ Redesigning notifications to be time-contextual with lesson-focused messaging:
 ## Phase 2: Core Infrastructure Changes
 
 ### 2.1 Daily Lesson Tracking
-- [ ] Add daily lesson counter to state file
-- [ ] Implement daily reset logic (midnight boundary)
-- [ ] Add helper functions for daily lesson calculations
-- [ ] Test daily tracking logic
+- [x] Add daily lesson counter to state file
+- [x] Implement daily reset logic (midnight boundary)
+- [x] Add helper functions for daily lesson calculations
+- [x] Test daily tracking logic
 
 ### 2.2 Time-Based Notification Logic
-- [ ] Create time-aware notification dispatcher
-- [ ] Add schedule type detection (morning/midday/evening/night)
-- [ ] Implement different notification triggers per time slot
-- [ ] Add priority level logic per schedule
+- [x] Create time-aware notification dispatcher
+- [x] Add schedule type detection (morning/midday/evening/night)
+- [x] Implement different notification triggers per time slot
+- [x] Add priority level logic per schedule
 
 ### 2.3 Notification Content Updates
-- [ ] Create morning notification template (goal setting)
-- [ ] Create midday notification template (progress check)
-- [ ] Create evening notification template (final push)
-- [ ] Create night notification template (daily recap)
-- [ ] Update notification method signatures
+- [x] Create morning notification template (goal setting)
+- [x] Create midday notification template (progress check)
+- [x] Create evening notification template (final push)
+- [x] Create night notification template (daily recap)
+- [x] Update notification method signatures
 
 ## Phase 3: Integration & Logic
 

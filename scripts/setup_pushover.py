@@ -6,9 +6,10 @@ Interactive setup for Pushover notifications in the Duolingo tracker.
 
 import os, sys
 current_dir = os.path.dirname(__file__)
-sys.path.append(os.path.abspath(os.path.join(current_dir, 'src')))
-sys.path.append(os.path.abspath(os.path.join(current_dir)))
-from notifiers.pushover_notifier import PushoverNotifier
+project_root = os.path.abspath(os.path.join(current_dir, '..'))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'src'))
+from src.notifiers.pushover_notifier import PushoverNotifier
 
 def main():
     """Interactive setup for Pushover credentials."""
