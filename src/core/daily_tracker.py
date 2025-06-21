@@ -99,7 +99,7 @@ def calculate_daily_progress(state_data):
         'status': status
     }
 
-def send_time_based_notification(notifier, time_slot, state_data, has_new_lessons, has_new_units, units_completed):
+def send_time_based_notification(notifier, time_slot, state_data, has_new_lessons, has_new_units, units_completed, json_data):
     """Send appropriate notification based on current time slot."""
     daily_progress = calculate_daily_progress(state_data)
     
@@ -107,6 +107,9 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
     total_completed_units = len(state_data.get('processed_units', []))
     total_progress_pct = (total_completed_units / TOTAL_UNITS_IN_COURSE) * 100
     trajectory_info = {'progress_pct': total_progress_pct}
+    
+    # Get streak from scraper data
+    current_streak = json_data.get('current_streak', 0)
     
     # Determine if we should send notification based on time slot and activity
     should_send = False
@@ -116,7 +119,6 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
         should_send = True
         # Get yesterday's progress if available
         yesterday_progress = state_data.get('yesterday_progress')
-        current_streak = 30  # TODO: Get from scraper data if available
         notifier.send_morning_notification(
             daily_goal=daily_progress['goal'],
             current_streak=current_streak,
@@ -413,7 +415,7 @@ def main():
             if notifier.is_enabled():
                 send_time_based_notification(
                     notifier, current_time_slot, state_data, 
-                    has_new_lessons, has_new_units, len(newly_completed)
+                    has_new_lessons, has_new_units, len(newly_completed), json_data
                 )
         else:
             print("❌ Failed to update markdown file.")
