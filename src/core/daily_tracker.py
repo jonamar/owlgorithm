@@ -49,20 +49,35 @@ def get_current_time_slot():
     else:
         return 'night'
 
-def reset_daily_lessons_if_needed(state_data):
+def reset_daily_lessons_if_needed(state_data, json_data=None):
     """Reset daily lesson counters if it's a new day."""
     current_date = get_current_date()
     last_daily_reset = state_data.get('last_daily_reset', '')
     
     if current_date != last_daily_reset:
+        # Count today's lessons from JSON data if available
+        todays_lessons = 0
+        if json_data:
+            todays_lessons = count_todays_lessons(json_data, current_date)
+        
         # Reset daily counters
-        state_data['daily_lessons_completed'] = 0
+        state_data['daily_lessons_completed'] = todays_lessons
         state_data['daily_goal_lessons'] = calculate_daily_lesson_goal(state_data)
         state_data['last_daily_reset'] = current_date
         print(f"🌅 New day detected! Reset daily counters for {current_date}")
+        print(f"   Today's lessons found: {todays_lessons}")
         return True, state_data
     
     return False, state_data
+
+def count_todays_lessons(json_data, target_date):
+    """Count lessons completed on a specific date."""
+    count = 0
+    for session in json_data.get('sessions', []):
+        session_date = session.get('date', '')
+        if session_date == target_date and session.get('is_lesson', False):
+            count += 1
+    return count
 
 def calculate_daily_lesson_goal(state_data):
     """Calculate how many lessons should be completed per day."""
@@ -331,8 +346,8 @@ def main():
         with open(STATE_FILE, 'r') as f:
             state_data = json.load(f)
 
-    # Handle daily lesson tracking
-    daily_reset_occurred, state_data = reset_daily_lessons_if_needed(state_data)
+    # Handle daily lesson tracking (now that we have json_data)
+    daily_reset_occurred, state_data = reset_daily_lessons_if_needed(state_data, json_data)
     current_time_slot = get_current_time_slot()
     
     print(f"🕐 Current time slot: {current_time_slot}")
