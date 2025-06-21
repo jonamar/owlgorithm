@@ -392,7 +392,7 @@ def main():
     # Initialize Pushover notifier
     notifier = PushoverNotifier()
 
-    # Decide whether to update based on new units, new lessons, new sessions or force update
+    # Update data if changes detected
     if has_new_units or has_new_lessons or has_new_sessions or force_update:
         print(f"🔄 Changes detected, updating tracker data...")
         
@@ -425,13 +425,6 @@ def main():
             with open(STATE_FILE, 'w') as f:
                 json.dump(state_data, f, indent=2)
             print(f"✅ State file '{STATE_FILE}' updated with latest data.")
-            
-            # Send time-based notifications
-            if notifier.is_enabled():
-                send_time_based_notification(
-                    notifier, current_time_slot, state_data, 
-                    has_new_lessons, has_new_units, len(newly_completed), json_data
-                )
         else:
             print("❌ Failed to update markdown file.")
     else:
@@ -441,5 +434,12 @@ def main():
         state_data['last_scrape_date'] = current_scrape_date
         with open(STATE_FILE, 'w') as f:
             json.dump(state_data, f, indent=2)
+
+    # Send time-based notifications REGARDLESS of whether data changed
+    if notifier.is_enabled():
+        send_time_based_notification(
+            notifier, current_time_slot, state_data, 
+            has_new_lessons, has_new_units, len(newly_completed), json_data
+        )
 
  
