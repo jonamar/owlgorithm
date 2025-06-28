@@ -106,7 +106,8 @@ cd C:\path\to\owlgorithm && python daily_tracker.py
 ## 🔧️ Requirements
 
 - Python 3.7+
-- Selenium WebDriver (Firefox or Chrome)
+- Firefox browser installed
+- Selenium WebDriver with geckodriver (auto-installed)
 - Virtual environment with required packages
 - Internet connection
 - Public duome.eu profile (username must exist on duome.eu)

@@ -26,6 +26,14 @@
 **Lesson Tracking**: Now counts all sessions accurately (core + practice)
 **Notification Logic**: Simplified to always send (no restrictive conditions)
 
+## RECENT IMPROVEMENTS ✅
+
+### **Browser Automation Simplified (June 28, 2025)** 
+- **Problem**: Complex multi-browser fallback system (Chrome → Firefox → Safari) was unnecessary
+- **Solution**: Simplified to Firefox-only with enhanced error handling
+- **Benefits**: Reduced failure points, cleaner codebase, better error messages
+- **Result**: More reliable scraping with specific troubleshooting guidance
+
 ## LESSONS LEARNED
 
 ### **Root Cause Analysis**
@@ -40,6 +48,7 @@ The notification system failures were caused by **multiple cascading issues**:
 - **Environment Consistency**: Fixed launchd runner to use virtual environment Python
 - **Accurate Tracking**: Modified lesson counting to include all sessions (practice + core)
 - **Systematic Testing**: Used scheduled test jobs to verify fixes instead of waiting hours
+- **Browser Simplification**: Removed complex fallback system for single reliable browser
 
 ### **Key Insight**
 The system **was running** but **silently failing** due to overly complex notification logic. The Python environment fix was necessary but not sufficient - the logic simplification was the critical breakthrough.

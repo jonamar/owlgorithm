@@ -72,7 +72,7 @@ launchctl load ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
 - **Smart notifications**: Different messages for morning/midday/evening/night
 - **Daily progress tracking**: Reset counters, track streaks, compute projections
 - **Auto-refresh**: Clicks duome.eu update button before scraping
-- **Resilient browser handling**: Falls back Chrome → Firefox → Safari
+- **Firefox-only browser automation**: Simplified, reliable browser setup with enhanced error handling
 - **launchd scheduling**: Runs 4x daily (6am, 12pm, 5pm, 10pm) via macOS native scheduler
 
 ## File Structure
@@ -97,7 +97,7 @@ launchctl load ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
 ## Dependencies
 
 Core: Selenium, requests, beautifulsoup4, pandas, webdriver-manager
-Browser: Chrome (preferred), Firefox, Safari fallback
+Browser: Firefox with geckodriver (auto-installed)
 Environment: Python 3.7+, virtual environment recommended
 
 ## Important Notes
