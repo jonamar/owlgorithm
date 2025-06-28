@@ -79,7 +79,19 @@ After running the tracker, you'll get:
 
 ## 🔁 Scheduling Options
 
-### macOS/Linux (cron)
+### macOS (launchd) - Recommended
+```bash
+# Check if service is loaded and running
+launchctl list | grep owlgorithm
+
+# Load the service (if not already loaded)
+launchctl load ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
+
+# View logs
+tail -f /Users/jonamar/Documents/owlgorithm/logs/tracker.log
+```
+
+### Linux (cron)
 ```bash
 # Add to crontab for daily automatic refresh and tracking
 0 23 * * * cd /path/to/owlgorithm && /usr/bin/python3 scripts/daily_update.py

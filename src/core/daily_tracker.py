@@ -71,11 +71,11 @@ def reset_daily_lessons_if_needed(state_data, json_data=None):
     return False, state_data
 
 def count_todays_lessons(json_data, target_date):
-    """Count lessons completed on a specific date."""
+    """Count all sessions (lessons + practice) completed on a specific date."""
     count = 0
     for session in json_data.get('sessions', []):
         session_date = session.get('date', '')
-        if session_date == target_date and session.get('is_lesson', False):
+        if session_date == target_date:
             count += 1
     return count
 
@@ -141,16 +141,14 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
         )
         
     elif time_slot == 'midday':
-        # Midday: Send only if activity detected OR significantly behind
-        should_send = has_new_lessons or daily_progress['status'] == 'behind'
-        if should_send:
-            notifier.send_midday_notification(daily_progress)
+        # Midday: Always send (simplified logic)
+        should_send = True
+        notifier.send_midday_notification(daily_progress)
             
     elif time_slot == 'evening':
-        # Evening: Send only if activity detected OR behind goal
-        should_send = has_new_lessons or daily_progress['status'] in ['behind', 'close']
-        if should_send:
-            notifier.send_evening_notification(daily_progress)
+        # Evening: Always send (simplified logic)  
+        should_send = True
+        notifier.send_evening_notification(daily_progress)
             
     elif time_slot == 'night':
         # Night: Always send recap

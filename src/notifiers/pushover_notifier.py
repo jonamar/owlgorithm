@@ -13,7 +13,7 @@ from datetime import datetime
 class PushoverNotifier:
     """Handles Pushover API notifications."""
     
-    def __init__(self, config_file: str | None = None):
+    def __init__(self, config_file=None):
         """Initialize notifier; config path comes from central config unless overridden."""
         if config_file is None:
             config_file = cfg.NOTIFIER_CONFIG_FILE
