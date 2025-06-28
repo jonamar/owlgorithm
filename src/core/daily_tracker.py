@@ -293,8 +293,8 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     content = re.sub(r"(Completed Units:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
     content = re.sub(r"(Remaining Units:\s*)(\d+)", rf"\g<1>{new_remaining_units}", content)
     
-    # Update total lessons with computed totals
-    content = re.sub(r"(Total Lessons Completed:\s*)(\d+)", rf"\g<1>{total_lessons_count}", content)
+    # Update total lessons with computed totals (handle markdown bold formatting)
+    content = re.sub(r"(\*\*Total Lessons Completed\*\*:\s*)(\d+)", rf"\g<1>{total_lessons_count}", content)
     
     # Add detail about core lessons vs practice (if available)
     if core_lessons is not None and practice_sessions is not None:
