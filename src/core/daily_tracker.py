@@ -245,7 +245,68 @@ def get_newly_completed_units(json_data, state_data):
     # If we have new completed units or new session data, let's update
     return newly_completed, completed_in_json, has_new_sessions
 
-def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None):
+def calculate_performance_metrics(json_data):
+    """Calculate daily/weekly averages and performance metrics from session data."""
+    from collections import defaultdict
+    from datetime import datetime
+    
+    daily_stats = defaultdict(lambda: {'sessions': 0, 'xp': 0})
+    total_sessions = 0
+    total_xp = 0
+    
+    for session in json_data.get('sessions', []):
+        date = session.get('date', 'unknown')
+        xp = session.get('xp', 0)
+        
+        if date != 'unknown':
+            daily_stats[date]['sessions'] += 1
+            daily_stats[date]['xp'] += xp
+            total_sessions += 1
+            total_xp += xp
+    
+    # Get date range
+    dates = sorted([d for d in daily_stats.keys()])
+    if not dates:
+        return None
+    
+    active_days = len(dates)
+    daily_avg_sessions = total_sessions / active_days if active_days > 0 else 0
+    daily_avg_xp = total_xp / active_days if active_days > 0 else 0
+    
+    # Weekly averages
+    weekly_avg_sessions = daily_avg_sessions * 7
+    weekly_avg_xp = daily_avg_xp * 7
+    
+    # Recent 7-day performance
+    recent_dates = dates[-7:] if len(dates) >= 7 else dates
+    recent_sessions = sum(daily_stats[d]['sessions'] for d in recent_dates)
+    recent_xp = sum(daily_stats[d]['xp'] for d in recent_dates)
+    recent_days = len(recent_dates)
+    
+    recent_avg_sessions = recent_sessions / recent_days if recent_days > 0 else 0
+    recent_avg_xp = recent_xp / recent_days if recent_days > 0 else 0
+    
+    # Calculate streak
+    consecutive_days = 0
+    for date in reversed(dates):
+        if daily_stats[date]['sessions'] > 0:
+            consecutive_days += 1
+        else:
+            break
+    
+    return {
+        'daily_avg_sessions': daily_avg_sessions,
+        'weekly_avg_sessions': weekly_avg_sessions,
+        'daily_avg_xp': daily_avg_xp,
+        'weekly_avg_xp': weekly_avg_xp,
+        'active_days': active_days,
+        'consecutive_days': consecutive_days,
+        'recent_avg_sessions': recent_avg_sessions,
+        'recent_avg_xp': recent_avg_xp,
+        'recent_days': recent_days
+    }
+
+def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None):
     """Reads, updates, and writes the personal-math.md file.
     
     Args:
@@ -254,6 +315,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
         content: Content of the markdown file
         core_lessons: Optional number of core lessons (without practice)
         practice_sessions: Optional number of practice sessions
+        json_data: Optional session data for calculating performance metrics
     """
     print(f"📈 Updating stats...")
     
@@ -310,6 +372,35 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     content = re.sub(r"(Total Lessons Remaining:\s*)~?[\d,]+", rf"\g<1>~{total_lessons_remaining:,.0f}", content)
     content = re.sub(r"(Lessons Per Day Required:\s*)\*\*~?[\d.]+\*\*", rf"\g<1>**~{lessons_per_day_required:.1f} lessons**", content)
     content = re.sub(r"(Time Per Day Required:\s*)\*\*~?[\w\s]+\*\*", rf"\g<1>**{time_per_day_str}**", content)
+    
+    # Update performance metrics if we have session data
+    if json_data:
+        metrics = calculate_performance_metrics(json_data)
+        if metrics:
+            # Update daily average
+            content = re.sub(r"(\*\*Daily Average\*\*:\s*)[\d.]+\s*lessons/day.*", 
+                          rf"\g<1>{metrics['daily_avg_sessions']:.1f} lessons/day (across {metrics['active_days']} active days)", content)
+            
+            # Update weekly average
+            content = re.sub(r"(\*\*Weekly Average\*\*:\s*)[\d.]+\s*lessons/week", 
+                          rf"\g<1>{metrics['weekly_avg_sessions']:.1f} lessons/week", content)
+            
+            # Update XP daily average
+            content = re.sub(r"(\*\*XP Daily Average\*\*:\s*)[\d,]+\s*XP/day", 
+                          rf"\g<1>{metrics['daily_avg_xp']:.0f} XP/day", content)
+            
+            # Update XP weekly average
+            content = re.sub(r"(\*\*XP Weekly Average\*\*:\s*)[\d,]+\s*XP/week", 
+                          rf"\g<1>{metrics['weekly_avg_xp']:,.0f} XP/week", content)
+            
+            # Update current streak
+            content = re.sub(r"(\*\*Current Streak\*\*:\s*)\d+\s*consecutive active days", 
+                          rf"\g<1>{metrics['consecutive_days']} consecutive active days", content)
+            
+            # Update recent performance
+            content = re.sub(r"(\*\*Recent Performance\*\*.*?:\s*)[\d.]+\s*lessons/day,\s*[\d,]+\s*XP/day", 
+                          rf"\g<1>{metrics['recent_avg_sessions']:.1f} lessons/day, {metrics['recent_avg_xp']:.0f} XP/day", content)
+    
     content = re.sub(r"(\*Last updated:\s*)[\w\s,]+", rf"\g<1>{datetime.now().strftime('%B %d, %Y')}", content)
 
     with open(MARKDOWN_FILE, 'w') as f:
@@ -404,7 +495,8 @@ def main():
             total_lessons_count=new_total_lessons, 
             content=content,
             core_lessons=new_core_lessons,
-            practice_sessions=new_practice_sessions
+            practice_sessions=new_practice_sessions,
+            json_data=json_data
         )
         
         if success:
