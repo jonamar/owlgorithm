@@ -18,45 +18,19 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+# Removed Chrome imports - using Firefox only
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 def fetch_duome_data_with_update(username, headless=True):
-    """Fetch raw data from duome.eu with automatic stats update"""
-    # Use standard URL and rely on button click for updates
+    """Fetch raw data from duome.eu with automatic stats update using Firefox"""
     url = f"https://duome.eu/{username}"
-    print(f"Opening browser and navigating to {url}...")
+    print(f"Opening Firefox browser and navigating to {url}...")
     
     driver = None
     try:
-        # Try different browsers in order of preference
-        browsers_to_try = [
-            ('chrome', lambda: setup_chrome_driver(headless)),
-            ('firefox', lambda: setup_firefox_driver(headless)),
-            ('safari', lambda: setup_safari_driver()),
-        ]
-        
-        driver = None
-        browser_name = None
-        
-        for name, setup_func in browsers_to_try:
-            try:
-                print(f"Trying {name.title()} browser...")
-                driver = setup_func()
-                browser_name = name
-                print(f"Successfully initialized {name.title()} browser")
-                break
-            except Exception as e:
-                print(f"{name.title()} browser failed: {e}")
-                continue
-        
-        if not driver:
-            print("No suitable browser found. Please install Chrome, Firefox, or enable Safari WebDriver.")
-            print("For Chrome: Download from https://www.google.com/chrome/")
-            print("For Safari: Run 'sudo safaridriver --enable' in terminal")
-            return None
+        print("Initializing Firefox browser...")
+        driver = setup_firefox_driver(headless)
+        print("✅ Firefox browser initialized successfully")
         
         # Navigate to the standard page
         driver.get(url)
@@ -137,29 +111,26 @@ def fetch_duome_data_with_update(username, headless=True):
         return page_source
         
     except Exception as e:
-        print(f"Error during browser automation: {e}")
+        print(f"❌ Firefox browser automation failed: {e}")
+        
+        if 'firefox' in str(e).lower() or 'geckodriver' in str(e).lower():
+            print("🔧 Firefox Setup Issues:")
+            print("   • Install Firefox: https://www.mozilla.org/firefox/")
+            print("   • Geckodriver will be auto-installed via webdriver-manager")
+        elif 'permission' in str(e).lower():
+            print("🔧 Permission Issues:")
+            print("   • Grant Firefox accessibility permissions in System Preferences")
+            print("   • Try running with sudo if needed")
+        else:
+            print("🔧 General browser automation error - check logs above for details")
+        
+        print("\n💡 Attempting fallback to direct HTTP request...")
         return None
         
     finally:
         if driver:
             driver.quit()
 
-def setup_chrome_driver(headless=True):
-    """Setup Chrome WebDriver"""
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from webdriver_manager.chrome import ChromeDriverManager
-    
-    chrome_options = Options()
-    if headless:
-        chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
-    
-    service = Service(ChromeDriverManager().install())
-    return webdriver.Chrome(service=service, options=chrome_options)
 
 def setup_firefox_driver(headless=True):
     """Setup Firefox WebDriver"""
@@ -174,13 +145,6 @@ def setup_firefox_driver(headless=True):
     service = Service(GeckoDriverManager().install())
     return webdriver.Firefox(service=service, options=firefox_options)
 
-def setup_safari_driver():
-    """Setup Safari WebDriver (macOS only)"""
-    from selenium.webdriver.safari.service import Service
-    
-    # Safari doesn't support headless mode
-    service = Service()
-    return webdriver.Safari(service=service)
 
 def fetch_duome_data(username):
     """Fallback method: Fetch raw data from duome.eu without automation"""
