@@ -245,6 +245,49 @@ def get_newly_completed_units(json_data, state_data):
     # If we have new completed units or new session data, let's update
     return newly_completed, completed_in_json, has_new_sessions
 
+def calculate_unit_completion_metrics(json_data, total_completed_units):
+    """Calculate lessons per unit based on completed units data."""
+    unit_stats = json_data.get('unit_stats', {})
+    
+    # Find completed units (those with unit_completion sessions)
+    completed_units_data = []
+    for unit_name, stats in unit_stats.items():
+        session_types = stats.get('session_types', {})
+        completions = session_types.get('unit_completion', 0)
+        
+        if completions > 0:
+            total_lessons = stats.get('total_combined_lessons', 0)
+            core_lessons = stats.get('total_lessons', 0)
+            practice_sessions = stats.get('total_practice', 0)
+            
+            completed_units_data.append({
+                'name': unit_name,
+                'total_lessons': total_lessons,
+                'core_lessons': core_lessons,
+                'practice_sessions': practice_sessions
+            })
+    
+    if not completed_units_data:
+        return None
+        
+    # Calculate average lessons per unit
+    total_lessons_sum = sum(unit['total_lessons'] for unit in completed_units_data)
+    avg_lessons_per_unit = total_lessons_sum / len(completed_units_data)
+    
+    # Calculate daily requirement
+    remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
+    total_lessons_needed = remaining_units * avg_lessons_per_unit
+    daily_requirement = total_lessons_needed / GOAL_DAYS
+    
+    return {
+        'completed_units_tracked': len(completed_units_data),
+        'avg_lessons_per_unit': avg_lessons_per_unit,
+        'remaining_units': remaining_units,
+        'total_lessons_needed': total_lessons_needed,
+        'daily_requirement': daily_requirement,
+        'completed_units_data': completed_units_data
+    }
+
 def calculate_performance_metrics(json_data):
     """Calculate daily/weekly averages and performance metrics from session data."""
     from collections import defaultdict
@@ -306,7 +349,7 @@ def calculate_performance_metrics(json_data):
         'recent_days': recent_days
     }
 
-def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None):
+def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None, state_data=None):
     """Reads, updates, and writes the personal-math.md file.
     
     Args:
@@ -316,6 +359,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
         core_lessons: Optional number of core lessons (without practice)
         practice_sessions: Optional number of practice sessions
         json_data: Optional session data for calculating performance metrics
+        state_data: Optional state data for calculating goal progress
     """
     print(f"📈 Updating stats...")
     
@@ -400,6 +444,41 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
             # Update recent performance
             content = re.sub(r"(\*\*Recent Performance\*\*.*?:\s*)[\d.]+\s*lessons/day,\s*[\d,]+\s*XP/day", 
                           rf"\g<1>{metrics['recent_avg_sessions']:.1f} lessons/day, {metrics['recent_avg_xp']:.0f} XP/day", content)
+        
+        # Update goal progress metrics
+        total_completed_units = state_data.get('total_completed_units', 86)
+        
+        goal_metrics = calculate_unit_completion_metrics(json_data, total_completed_units)
+        if goal_metrics and metrics:
+            current_avg = metrics['daily_avg_sessions']
+            daily_req = goal_metrics['daily_requirement']
+            pace_diff = current_avg - daily_req
+            
+            # Determine pace status
+            if pace_diff >= 0:
+                pace_status = f"✅ AHEAD by {pace_diff:.1f} lessons/day"
+            else:
+                pace_status = f"⚠️ BEHIND by {abs(pace_diff):.1f} lessons/day"
+            
+            # Calculate projected completion
+            projected_days = goal_metrics['total_lessons_needed'] / current_avg if current_avg > 0 else 0
+            projected_months = projected_days / 30.44  # avg days per month
+            
+            # Update daily requirement
+            content = re.sub(r"(\*\*Daily Requirement\*\*:\s*)[\d.]+\s*lessons/day.*", 
+                          rf"\g<1>{daily_req:.1f} lessons/day (based on {goal_metrics['completed_units_tracked']} completed units, {goal_metrics['avg_lessons_per_unit']:.1f} avg lessons/unit)", content)
+            
+            # Update pace status
+            content = re.sub(r"(\*\*Pace Status\*\*:\s*).*lessons/day", 
+                          rf"\g<1>{pace_status}", content)
+            
+            # Update projected completion
+            content = re.sub(r"(\*\*Projected Completion\*\*:\s*)[\d.]+\s*months.*", 
+                          rf"\g<1>{projected_months:.1f} months ({abs(projected_months - 18):.1f} months {'early' if projected_months < 18 else 'late'})", content)
+            
+            # Update total lessons needed
+            content = re.sub(r"(\*\*Total Lessons Needed\*\*:\s*)[\d,]+\s*lessons.*", 
+                          rf"\g<1>{goal_metrics['total_lessons_needed']:,.0f} lessons ({goal_metrics['remaining_units']} remaining units)", content)
     
     content = re.sub(r"(\*Last updated:\s*)[\w\s,]+", rf"\g<1>{datetime.now().strftime('%B %d, %Y')}", content)
 
@@ -496,7 +575,8 @@ def main():
             content=content,
             core_lessons=new_core_lessons,
             practice_sessions=new_practice_sessions,
-            json_data=json_data
+            json_data=json_data,
+            state_data=state_data
         )
         
         if success:
