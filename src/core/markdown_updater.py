@@ -65,7 +65,11 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     time_per_day_str = f"~{hours} hour {minutes} minutes"
 
     # --- Update content with new values ---
+    # Handle both "Completed Units:" and "**Completed Units**:" formats
+    content = re.sub(r"(\*\*Completed Units\*\*:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
     content = re.sub(r"(Completed Units:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
+    
+    content = re.sub(r"(\*\*Remaining Units\*\*:\s*)(\d+)", rf"\g<1>{new_remaining_units}", content)
     content = re.sub(r"(Remaining Units:\s*)(\d+)", rf"\g<1>{new_remaining_units}", content)
     
     # Update total lessons with computed totals (handle markdown bold formatting)
