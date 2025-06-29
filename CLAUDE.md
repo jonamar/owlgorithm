@@ -100,6 +100,42 @@ Core: Selenium, requests, beautifulsoup4, pandas, webdriver-manager
 Browser: Firefox with geckodriver (auto-installed)
 Environment: Python 3.7+, virtual environment recommended
 
+## CRITICAL CURRENT STATUS (June 29, 2025)
+
+### AUTOMATION FAILURE DIAGNOSED ⚠️
+**ROOT CAUSE**: macOS security restrictions prevent launchd from accessing ~/Documents/ folder
+- Manual execution: ✅ Works perfectly (notifications received at 10:55, 11:02)
+- Automated execution: ❌ Fails with "Operation not permitted" (exit code 78)
+- Firefox browser never opens during automated runs
+- All code is working correctly - this is an environment/permissions issue
+
+### SUCCESS CRITERIA 🎯
+**Must achieve 5 consecutive automated notifications** before declaring automation "fixed"
+- Current status: 0/5 consecutive successes
+- Manual tests confirm code works, need environment fix
+
+### PLANNED SOLUTION 📋
+**Move entire project out of ~/Documents/** to avoid macOS privacy restrictions
+- Target location: `/usr/local/owlgorithm/` 
+- Update all file paths and configurations
+- Validate automation works from new location
+- Documents folder has special macOS protections that block launchd access
+
+### COMPLETED WORK ✅
+- **Phase 1A**: Core module extraction (615→335 lines, -45%)
+- **Phase 1B**: Comprehensive testing infrastructure (29 tests, 99% coverage)
+- **Phase 1C**: Automation diagnostics and logging infrastructure
+- **Refactoring**: All code successfully modularized and tested
+- **Environment diagnosis**: Isolated macOS security as root cause
+
+### PHASE 1 ACHIEVEMENTS
+- Extracted `metrics_calculator.py` and `markdown_updater.py` 
+- Built comprehensive test suite with fixtures and mocks
+- Fixed critical state reconciliation bugs through testing
+- Created aggressive 30-min notification schedule for validation
+- Simplified notifications to single useful template
+- Comprehensive launchd diagnostic work completed
+
 ## Important Notes
 
 - Requires active duome.eu profile (username must exist publicly)
@@ -107,4 +143,4 @@ Environment: Python 3.7+, virtual environment recommended
 - No Duolingo credentials needed (scrapes public duome.eu data)
 - Includes respectful delays and error handling for web scraping
 - State management prevents duplicate notifications
-- Time-slot based notification logic (morning/midday/evening/night)
+- **AUTOMATION CURRENTLY BROKEN**: Use manual execution until migration complete
