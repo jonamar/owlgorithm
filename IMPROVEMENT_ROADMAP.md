@@ -200,6 +200,8 @@ git revert HEAD  # Or restore daily_tracker_original.py
 - **Modules Created**: metrics_calculator.py (164 lines), markdown_updater.py (165 lines)
 - **Strategy Used**: Direct module extraction with working replacement validation
 - **Key Learning**: Real data testing at each step prevented regressions
+- **Critical Issue Found**: Test methodology used stale data (alphabetical vs chronological file sort)
+- **Process Fix**: Added current data verification to validation checklist
 - **Validation**: Complete workflow (scrape → process → notify) tested successfully
 - **Commit**: ea8d504 on feature/phase-1a-refactor-core branch
 
@@ -232,6 +234,7 @@ git revert HEAD  # Or restore daily_tracker_original.py
 
 ### Validation Checklist (Before Each Merge)
 - [ ] **Manual smoke test**: Run `python scripts/daily_update.py` successfully
+- [ ] **Current data verification**: Confirm tests use latest data files (`max(files, key=os.path.getctime)`)
 - [ ] **Output comparison**: New code produces same results as original
 - [ ] **Error handling**: Graceful failure under expected error conditions
 - [ ] **Performance**: No significant slowdown in execution time
