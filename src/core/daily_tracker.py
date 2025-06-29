@@ -31,7 +31,7 @@ from .metrics_calculator import (
     calculate_performance_metrics
 )
 from .markdown_updater import update_markdown_file
-from utils.logger import get_logger
+from utils.logger import get_logger, OWLLogger
 
 MARKDOWN_FILE = cfg.MARKDOWN_FILE
 STATE_FILE = cfg.STATE_FILE
@@ -77,6 +77,9 @@ def reset_daily_lessons_if_needed(state_data, json_data=None):
         state_data['last_daily_reset'] = current_date
         print(f"🌅 New day detected! Reset daily counters for {current_date}")
         print(f"   Today's lessons found: {todays_lessons}")
+        try:
+            logger.state_change(f"New day reset: {current_date}, today's lessons: {todays_lessons}")
+        except: pass
         return True, state_data
     
     return False, state_data
@@ -96,6 +99,9 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
     )
     
     print(f"📱 Sent {time_slot} notification")
+    try:
+        logger.external_call(f"Notification sent: {time_slot} slot")
+    except: pass
 
 def run_scraper():
     """Runs the duome_raw_scraper.py script to get the latest data."""
@@ -115,9 +121,15 @@ def run_scraper():
             text=True
         )
         print("✅ Scraper ran successfully.")
+        try:
+            logger.external_call("Scraper completed successfully")
+        except: pass
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Scraper script failed with error: {e.stderr}")
+        try:
+            logger.external_call(f"Scraper failed: {e.stderr}")
+        except: pass
         return False
     except FileNotFoundError:
         print("❌ Scraper script not found. Make sure you are in the correct directory.")
@@ -181,13 +193,24 @@ def get_newly_completed_units(json_data, state_data):
 
 def main():
     """Main execution function."""
+    # Initialize logging with automation detection
+    import sys
+    run_type = "automated" if len(sys.argv) == 1 and 'launchd' in str(sys.argv) else "manual"
+    global logger
+    logger = OWLLogger("daily_tracker", run_type)
+    logger.execution_step("Daily tracker started")
+    
     if not run_scraper():
+        logger.execution_step("Scraper failed - exiting")
         return
 
     latest_json_path = find_latest_json_file()
     if not latest_json_path:
         print("❌ No JSON file found after running scraper.")
+        logger.execution_step("No JSON file found - exiting")
         return
+    
+    logger.execution_step(f"Processing data from {latest_json_path}")
 
     with open(latest_json_path, 'r') as f:
         json_data = json.load(f)
