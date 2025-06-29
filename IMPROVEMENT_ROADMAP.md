@@ -42,6 +42,7 @@ This roadmap addresses these issues through focused, incremental improvements th
 
 - **Phase completion requirements**:
   - [ ] All tasks in phase completed and validated
+  - [ ] **Git status clean**: No unstaged changes remaining
   - [ ] Phase completion commit with summary of achievements
   - [ ] Roadmap updated with completion status and commit hash
   - [ ] Ready state for next phase documented
@@ -66,6 +67,10 @@ git merge feature/phase-1a-refactor-core
 
 # Emergency rollback if needed
 git revert HEAD  # Or restore daily_tracker_original.py
+
+# Git hygiene commands
+git status  # Always check before proceeding
+git add -A && git commit -m "Description"  # Commit all changes
 ```
 
 ---
@@ -239,6 +244,7 @@ git revert HEAD  # Or restore daily_tracker_original.py
 - [ ] **Error handling**: Graceful failure under expected error conditions
 - [ ] **Performance**: No significant slowdown in execution time
 - [ ] **State consistency**: No corruption of tracker_state.json or data files
+- [ ] **Git hygiene**: `git status` clean, all changes committed before proceeding
 
 ---
 
