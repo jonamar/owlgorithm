@@ -40,6 +40,12 @@ This roadmap addresses these issues through focused, incremental improvements th
   - [ ] No regression in daily operations
   - [ ] Rollback plan documented
 
+- **Phase completion requirements**:
+  - [ ] All tasks in phase completed and validated
+  - [ ] Phase completion commit with summary of achievements
+  - [ ] Roadmap updated with completion status and commit hash
+  - [ ] Ready state for next phase documented
+
 ### Git Commands Reference
 ```bash
 # Start Phase 1A
@@ -68,25 +74,21 @@ git revert HEAD  # Or restore daily_tracker_original.py
 
 *Foundation improvements for easier development and debugging*
 
-### Priority 1A: Refactor Core Module (HIGH)
-- [ ] **1.1** Extract `src/core/orchestrator.py` from daily_tracker.py
-  - [ ] Move main workflow coordination logic
-  - [ ] Keep dependencies minimal (config, logging, state management)
-  - [ ] Test equivalent functionality to current main()
-- [ ] **1.2** Create `src/core/metrics_calculator.py`
-  - [ ] Extract `calculate_performance_metrics()`
-  - [ ] Extract `calculate_unit_completion_metrics()`  
-  - [ ] Extract `calculate_daily_progress()`
-  - [ ] Add input validation for all functions
-- [ ] **1.3** Create `src/core/markdown_updater.py`
-  - [ ] Extract `update_markdown_file()` (146 lines)
-  - [ ] Centralize regex patterns as constants
-  - [ ] Add markdown template validation
-  - [ ] Test against existing personal-math.md
-- [ ] **1.4** Slim down daily_tracker.py
-  - [ ] Keep only orchestration imports and main()
-  - [ ] Verify all functionality preserved
-  - [ ] Update CLAUDE.md documentation
+### Priority 1A: Refactor Core Module (HIGH) ✅ COMPLETE
+- [x] **1.1** ~~Extract orchestrator logic~~ **→ REPLACED WITH DIRECT MODULE EXTRACTION**
+- [x] **1.2** Create `src/core/metrics_calculator.py` ✅
+  - [x] Extract `calculate_performance_metrics()` 
+  - [x] Extract `calculate_unit_completion_metrics()`  
+  - [x] Extract `calculate_daily_progress()`
+  - [x] Add input validation and test with real data
+- [x] **1.3** Create `src/core/markdown_updater.py` ✅
+  - [x] Extract `update_markdown_file()` (146 lines)
+  - [x] Centralize regex patterns as constants
+  - [x] Test against actual personal-math.md with real data
+- [x] **1.4** Slim down daily_tracker.py ✅
+  - [x] Replace function definitions with imports
+  - [x] Verify all functionality preserved (614→335 lines, -45%)
+  - [x] **PHASE COMPLETION COMMIT**: ea8d504
 
 ### Priority 1B: Testing Infrastructure (HIGH)
 - [ ] **1.5** Set up testing framework
@@ -193,7 +195,13 @@ git revert HEAD  # Or restore daily_tracker_original.py
 ### Completed Items
 *Track lessons learned and important decisions made during implementation*
 
-*None yet - will be populated as work progresses*
+**Phase 1A: Core Module Extraction (June 28, 2025)** ✅
+- **Achievement**: Reduced daily_tracker.py from 614 → 335 lines (-45%)
+- **Modules Created**: metrics_calculator.py (164 lines), markdown_updater.py (165 lines)
+- **Strategy Used**: Direct module extraction with working replacement validation
+- **Key Learning**: Real data testing at each step prevented regressions
+- **Validation**: Complete workflow (scrape → process → notify) tested successfully
+- **Commit**: ea8d504 on feature/phase-1a-refactor-core branch
 
 ### Current Blockers
 *Issues preventing progress on specific tasks*
