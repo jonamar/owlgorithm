@@ -116,7 +116,7 @@ Environment: Python 3.7+, virtual environment recommended
 
 ### PLANNED SOLUTION 📋
 **Move entire project out of ~/Documents/** to avoid macOS privacy restrictions
-- Target location: `/usr/local/owlgorithm/` 
+- Target location: `~/Development/owlgorithm/` 
 - Update all file paths and configurations
 - Validate automation works from new location
 - Documents folder has special macOS protections that block launchd access

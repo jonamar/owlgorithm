@@ -1,7 +1,7 @@
 # Project Migration Checklist
 
 **Migrating from**: `~/Documents/owlgorithm/`  
-**Migrating to**: `/usr/local/owlgorithm/`  
+**Migrating to**: `~/Development/owlgorithm/`  
 **Reason**: Bypass macOS security restrictions blocking launchd automation
 
 ## Pre-Migration Status
@@ -13,15 +13,16 @@
 
 ## Migration Steps
 
-### 1. Create New Location
+### 1. Target Location Ready
 ```bash
-sudo mkdir -p /usr/local/owlgorithm
-sudo chown -R jonamar:staff /usr/local/owlgorithm
+# Development folder already created by user
+ls -la ~/Development/
 ```
 
-### 2. Copy Files
+### 2. Drag-and-Drop Migration
 ```bash
-cp -r ~/Documents/owlgorithm/* /usr/local/owlgorithm/
+# User drags ~/Documents/owlgorithm/ to ~/Development/
+# Choose "Move" when prompted to avoid duplication
 ```
 
 ### 3. Update File Paths
@@ -32,7 +33,7 @@ cp -r ~/Documents/owlgorithm/* /usr/local/owlgorithm/
 - `~/Library/LaunchAgents/com.owlgorithm.duolingo.plist` (log paths)
 
 **Path Changes:**
-- `/Users/jonamar/Documents/owlgorithm/` → `/usr/local/owlgorithm/`
+- `/Users/jonamar/Documents/owlgorithm/` → `/Users/jonamar/Development/owlgorithm/`
 
 ### 4. Update Runner Script
 ```bash
@@ -40,7 +41,7 @@ cp -r ~/Documents/owlgorithm/* /usr/local/owlgorithm/
 # Change all instances of:
 # '/Users/jonamar/Documents/owlgorithm' 
 # TO:
-# '/usr/local/owlgorithm'
+# '/Users/jonamar/Development/owlgorithm'
 ```
 
 ### 5. Update LaunchAgent
@@ -53,7 +54,7 @@ cp -r ~/Documents/owlgorithm/* /usr/local/owlgorithm/
 ### 6. Test Migration
 ```bash
 # Test manual execution from new location
-cd /usr/local/owlgorithm
+cd ~/Development/owlgorithm
 python scripts/daily_update.py
 
 # Test runner script

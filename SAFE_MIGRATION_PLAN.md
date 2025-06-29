@@ -1,6 +1,7 @@
 # Safe Migration Plan: Drag-and-Drop Method
 
-**Goal**: Move entire owlgorithm project from Documents to avoid macOS security restrictions  
+**Goal**: Move entire owlgorithm project from Documents to Development folder to avoid macOS security restrictions  
+**Target**: `~/Development/owlgorithm/`  
 **Method**: User drag-and-drop to ensure complete file preservation and avoid duplication
 
 ## PRE-MIGRATION SAFETY CHECKS
@@ -27,12 +28,11 @@ git log --oneline -5  # Note latest commit hash for verification
 
 ## MIGRATION STEPS
 
-### Step 1: Create Target Location
+### Step 1: Target Location Ready
 ```bash
-sudo mkdir -p /usr/local/
-sudo chown jonamar:staff /usr/local/
-# Verify you can write to /usr/local/
-touch /usr/local/test && rm /usr/local/test
+# Development folder already created by user
+ls -la ~/Development/
+# Should show empty directory ready for project
 ```
 
 ### Step 2: User Drag-and-Drop
@@ -40,21 +40,21 @@ touch /usr/local/test && rm /usr/local/test
 1. Open Finder
 2. Navigate to `/Users/jonamar/Documents/`
 3. Select the entire `owlgorithm` folder
-4. Drag to `/usr/local/` 
+4. Drag to `/Users/jonamar/Development/` 
 5. **Choose "Move"** (not copy) when prompted
-6. Verify folder now exists at `/usr/local/owlgorithm/`
+6. Verify folder now exists at `~/Development/owlgorithm/`
 
 ### Step 3: Verify Complete Migration
 ```bash
 # Verify git repo intact
-cd /usr/local/owlgorithm
+cd ~/Development/owlgorithm
 git status
 git log --oneline -5  # Should match pre-migration hash
 
 # Verify all files moved
-ls -la /usr/local/owlgorithm/
-ls -la /usr/local/owlgorithm/.git/
-ls -la /usr/local/owlgorithm/duolingo_env/
+ls -la ~/Development/owlgorithm/
+ls -la ~/Development/owlgorithm/.git/
+ls -la ~/Development/owlgorithm/duolingo_env/
 
 # CRITICAL: Verify old location is EMPTY
 ls -la ~/Documents/owlgorithm/ 2>/dev/null && echo "ERROR: Old folder still exists!" || echo "✅ Old folder removed"
@@ -68,10 +68,10 @@ ls -la ~/Documents/owlgorithm/ 2>/dev/null && echo "ERROR: Old folder still exis
 # Change ALL instances of:
 # '/Users/jonamar/Documents/owlgorithm' 
 # TO:
-# '/usr/local/owlgorithm'
+# '/Users/jonamar/Development/owlgorithm'
 
 # Also update sys.path.insert lines
-sed -i.bak 's|/Users/jonamar/Documents/owlgorithm|/usr/local/owlgorithm|g' /Users/jonamar/bin/owlgorithm-daily-runner
+sed -i.bak 's|/Users/jonamar/Documents/owlgorithm|/Users/jonamar/Development/owlgorithm|g' /Users/jonamar/bin/owlgorithm-daily-runner
 ```
 
 ### Step 5: Update LaunchAgent
@@ -84,7 +84,7 @@ sed -i.bak 's|/Users/jonamar/Documents/owlgorithm|/usr/local/owlgorithm|g' /User
 ### Step 6: Test New Location
 ```bash
 # Test manual execution from new location
-cd /usr/local/owlgorithm
+cd ~/Development/owlgorithm
 python scripts/daily_update.py
 # Should receive notification if successful
 
@@ -135,7 +135,7 @@ find /usr -name "daily_tracker.py" 2>/dev/null
 
 ✅ **Migration Complete When:**
 - Old location completely empty: `~/Documents/owlgorithm/` doesn't exist
-- New location working: `/usr/local/owlgorithm/` fully functional
+- New location working: `~/Development/owlgorithm/` fully functional
 - Git repo intact: All commits and history preserved
 - Manual execution works from new location
 - Runner script works from new location
@@ -151,7 +151,7 @@ find /usr -name "daily_tracker.py" 2>/dev/null
 
 If migration fails:
 1. **Stop automation**: `launchctl bootout gui/$(id -u)/com.owlgorithm.duolingo`
-2. **Move project back**: Drag `/usr/local/owlgorithm/` back to `~/Documents/`
+2. **Move project back**: Drag `~/Development/owlgorithm/` back to `~/Documents/`
 3. **Restore runner script**: `mv /Users/jonamar/bin/owlgorithm-daily-runner.bak /Users/jonamar/bin/owlgorithm-daily-runner`
 4. **Use manual execution** until resolved
 
