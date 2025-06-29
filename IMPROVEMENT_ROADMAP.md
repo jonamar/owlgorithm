@@ -110,15 +110,27 @@ git add -A && git commit -m "Description"  # Commit all changes
   - [ ] End-to-end workflow test (scrape → process → notify)
   - [ ] Test error handling paths
 
-### Priority 1C: Logging Framework (MEDIUM)
-- [ ] **1.8** Implement structured logging
-  - [ ] Replace print statements with logging calls
-  - [ ] Add log levels (DEBUG/INFO/WARN/ERROR)
-  - [ ] Configure file rotation in logs/ directory
-- [ ] **1.9** Add error tracking
-  - [ ] Centralized exception handling
-  - [ ] Error context and stack traces
-  - [ ] Performance timing logs
+### Priority 1C: Comprehensive Logging & launchd Diagnostics (CRITICAL) 🚨
+- [ ] **1.8** Comprehensive Logging Infrastructure
+  - [ ] Timestamped logs with execution chain tracing
+  - [ ] Separate automated vs manual run identification
+  - [ ] Detailed error capture for each component (scraper, state, notifications)
+  - [ ] State reconciliation audit trail
+  - [ ] Performance timing and resource usage logs
+- [ ] **1.9** launchd Diagnostic Mode
+  - [ ] Test job with minimal config first
+  - [ ] Capture detailed launchd bootstrap errors (currently exit code 78)
+  - [ ] Validate environment/permissions issues
+  - [ ] Test individual components in isolation
+  - [ ] Document launchd-specific error patterns
+
+**URGENT CONTEXT**: 
+- Chronic automation failure: Manual tests work, scheduled runs fail silently
+- Exit code 78 (EX_CONFIG) indicates configuration error but no details captured
+- Current logging inadequate for diagnosing automation vs manual differences
+- 10:30am scheduled run failed despite computer being awake and active
+- Firefox browser window never opened (launchd job never executed)
+- This is blocking all other development until automation reliability is achieved
 
 ---
 

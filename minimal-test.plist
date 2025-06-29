@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.owlgorithm.test</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/jonamar/bin/owlgorithm-daily-runner</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Minute</key>
+        <integer>58</integer>
+    </dict>
+    <key>StandardErrorPath</key>
+    <string>/Users/jonamar/Documents/owlgorithm/logs/launchd-test-error.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/jonamar/Documents/owlgorithm/logs/launchd-test-output.log</string>
+</dict>
+</plist>

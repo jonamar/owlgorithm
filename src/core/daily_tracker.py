@@ -31,6 +31,7 @@ from .metrics_calculator import (
     calculate_performance_metrics
 )
 from .markdown_updater import update_markdown_file
+from utils.logger import get_logger
 
 MARKDOWN_FILE = cfg.MARKDOWN_FILE
 STATE_FILE = cfg.STATE_FILE
