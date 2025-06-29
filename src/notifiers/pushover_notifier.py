@@ -103,95 +103,40 @@ class PushoverNotifier:
             print(f"❌ Invalid response from Pushover API: {e}")
             return False
 
-    def send_morning_notification(self, daily_goal, current_streak, yesterday_progress=None):
-        """Send morning goal-setting notification."""
-        title = "🌅 Good Morning! Daily Goal Set"
-        
-        message = f"Today's Target: {daily_goal} lessons\n"
-        message += f"Current Streak: {current_streak} days\n"
-        
-        if yesterday_progress:
-            completed = yesterday_progress.get('completed', 0)
-            goal = yesterday_progress.get('goal', daily_goal)
-            pct = int((completed / goal) * 100) if goal > 0 else 0
-            message += f"Yesterday: {completed}/{goal} lessons ({pct}% of goal)\n"
-        
-        message += "Keep it up! 💪"
-        
-        return self.send_notification(title, message, priority=0)
-    
-    def send_midday_notification(self, daily_progress):
-        """Send midday progress check notification."""
-        title = "☀️ Midday Check-in"
-        
+    def send_simple_notification(self, daily_progress, units_completed=0, total_lessons=0):
+        """Send simplified notification - same template for all times."""
         completed = daily_progress['completed']
         goal = daily_progress['goal']
-        remaining = daily_progress['remaining']
         pct = int(daily_progress['progress_pct'])
         
-        message = f"Progress: {completed}/{goal} lessons ({pct}%)\n"
-        
-        if remaining > 0:
-            message += f"{remaining} lessons remaining today\n"
-            message += "You're on track! 📈" if pct >= 50 else "Time to get going! 🚀"
-        else:
-            message += "Daily goal achieved! 🎉"
-        
-        # Use low priority for midday check-ins
-        return self.send_notification(title, message, priority=-1)
-    
-    def send_evening_notification(self, daily_progress):
-        """Send evening final push notification."""
-        completed = daily_progress['completed']
-        goal = daily_progress['goal']
-        remaining = daily_progress['remaining']
-        pct = int(daily_progress['progress_pct'])
-        status = daily_progress['status']
-        
-        if status in ['ahead', 'on_track']:
-            title = "🌆 Evening Update - Crushing It!"
-            message = f"Progress: {completed}/{goal} lessons ({pct}%)\n"
-            if completed > goal:
-                message += "Daily goal exceeded! 🎉\n"
-                message += f"Bonus lesson{'s' if completed - goal > 1 else ''} completed!"
-            else:
-                message += "Daily goal achieved! 🎉"
-            priority = 0
-        else:
-            title = "🌆 Evening Check - Final Push!"
-            message = f"Progress: {completed}/{goal} lessons ({pct}%)\n"
-            message += f"{remaining} lesson{'s' if remaining > 1 else ''} needed before bed\n"
-            message += "You've got this! 🎯"
-            priority = 1  # Higher priority when behind
-        
-        return self.send_notification(title, message, priority=priority)
-    
-    def send_night_notification(self, daily_progress, units_completed=0, trajectory_info=None):
-        """Send night recap notification."""
-        completed = daily_progress['completed']
-        goal = daily_progress['goal']
-        status = daily_progress['status']
-        
-        if status in ['ahead', 'on_track']:
-            title = "🌙 Day Complete - Great Work!"
-            message = f"Final Count: {completed}/{goal} lessons ✅\n"
-            message += "Daily goal achieved!\n"
-            priority = 1
-        else:
-            title = "🌙 Day Complete - Tomorrow's Fresh Start!"
-            message = f"Final Count: {completed}/{goal} lessons\n"
-            message += "Don't worry, tomorrow's a new chance! 💪\n"
-            priority = 2 if completed == 0 else 1
+        title = "📊 Duolingo Update"
+        message = f"Today: {completed}/{goal} lessons ({pct}%)\n"
+        message += f"Total Sessions: {total_lessons:,}\n"
         
         if units_completed > 0:
             message += f"Units completed: {units_completed} 🎉\n"
         
-        if trajectory_info:
-            message += f"Overall progress: {trajectory_info.get('progress_pct', 0):.1f}% complete\n"
+        message += f"Time: {datetime.now().strftime('%H:%M')}"
         
-        message += f"Tomorrow's goal: {goal} lessons"
-        
-        return self.send_notification(title, message, priority=priority)
+        return self.send_notification(title, message, priority=0)
+    
+    # Keep old methods for backward compatibility but redirect to simple version
+    def send_morning_notification(self, daily_goal, current_streak, yesterday_progress=None):
+        """Legacy method - redirects to simple notification."""
+        daily_progress = {'completed': 0, 'goal': daily_goal, 'progress_pct': 0}
+        return self.send_simple_notification(daily_progress)
+    
+    def send_midday_notification(self, daily_progress):
+        """Legacy method - redirects to simple notification."""
+        return self.send_simple_notification(daily_progress)
+    
+    def send_evening_notification(self, daily_progress):
+        """Legacy method - redirects to simple notification."""
+        return self.send_simple_notification(daily_progress)
+    
+    def send_night_notification(self, daily_progress, units_completed=0, trajectory_info=None):
+        """Legacy method - redirects to simple notification."""
+        return self.send_simple_notification(daily_progress, units_completed)
 
     def send_daily_update(self, newly_completed_units, total_lessons, lessons_per_day_required, time_per_day_required):
         """

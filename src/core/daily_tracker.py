@@ -83,57 +83,18 @@ def reset_daily_lessons_if_needed(state_data, json_data=None):
 # Metrics calculation functions moved to metrics_calculator.py
 
 def send_time_based_notification(notifier, time_slot, state_data, has_new_lessons, has_new_units, units_completed, json_data):
-    """Send appropriate notification based on current time slot."""
+    """Send simplified notification - same template regardless of time slot."""
     daily_progress = calculate_daily_progress(state_data)
+    total_lessons = state_data.get('computed_total_sessions', 0)
     
-    # Get overall trajectory info
-    total_completed_units = len(state_data.get('processed_units', []))
-    total_progress_pct = (total_completed_units / TOTAL_UNITS_IN_COURSE) * 100
-    trajectory_info = {'progress_pct': total_progress_pct}
+    # Always send the same simple notification
+    notifier.send_simple_notification(
+        daily_progress=daily_progress,
+        units_completed=units_completed,
+        total_lessons=total_lessons
+    )
     
-    # Get streak from scraper data
-    current_streak = json_data.get('current_streak', 0)
-    
-    # Determine if we should send notification based on time slot and activity
-    should_send = False
-    
-    if time_slot == 'morning':
-        # Morning: Always send goal-setting message  
-        should_send = True
-        # Get yesterday's progress if available
-        yesterday_progress = state_data.get('yesterday_progress')
-        notifier.send_morning_notification(
-            daily_goal=daily_progress['goal'],
-            current_streak=current_streak,
-            yesterday_progress=yesterday_progress
-        )
-        
-    elif time_slot == 'midday':
-        # Midday: Always send (simplified logic)
-        should_send = True
-        notifier.send_midday_notification(daily_progress)
-            
-    elif time_slot == 'evening':
-        # Evening: Always send (simplified logic)  
-        should_send = True
-        notifier.send_evening_notification(daily_progress)
-            
-    elif time_slot == 'night':
-        # Night: Always send recap
-        should_send = True
-        notifier.send_night_notification(
-            daily_progress=daily_progress,
-            units_completed=units_completed,
-            trajectory_info=trajectory_info
-        )
-        
-        # Save today's progress as yesterday's for tomorrow morning
-        state_data['yesterday_progress'] = daily_progress.copy()
-    
-    if should_send:
-        print(f"📱 Sent {time_slot} notification")
-    else:
-        print(f"⏭️  Skipped {time_slot} notification - no activity detected")
+    print(f"📱 Sent {time_slot} notification")
 
 def run_scraper():
     """Runs the duome_raw_scraper.py script to get the latest data."""
