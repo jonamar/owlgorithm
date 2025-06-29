@@ -32,6 +32,7 @@ from .metrics_calculator import (
 )
 from .markdown_updater import update_markdown_file
 from utils.logger import get_logger, OWLLogger
+from data.repository import AtomicJSONRepository
 
 MARKDOWN_FILE = cfg.MARKDOWN_FILE
 STATE_FILE = cfg.STATE_FILE
@@ -215,10 +216,9 @@ def main():
     with open(latest_json_path, 'r') as f:
         json_data = json.load(f)
         
-    state_data = {}
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, 'r') as f:
-            state_data = json.load(f)
+    # Load or create state data using atomic operations
+    state_repo = AtomicJSONRepository(STATE_FILE)
+    state_data = state_repo.load({})
 
     # Handle daily lesson tracking (now that we have json_data)
     daily_reset_occurred, state_data = reset_daily_lessons_if_needed(state_data, json_data)
@@ -322,10 +322,11 @@ def main():
             
             state_data['last_scrape_date'] = current_scrape_date
             
-            # Write the updated state back to disk
-            with open(STATE_FILE, 'w') as f:
-                json.dump(state_data, f, indent=2)
-            print(f"✅ State file '{STATE_FILE}' updated with latest data.")
+            # Write the updated state back to disk atomically
+            if state_repo.save(state_data):
+                print(f"✅ State file '{STATE_FILE}' updated with latest data.")
+            else:
+                print(f"❌ Failed to save state file '{STATE_FILE}'")
         else:
             print("❌ Failed to update markdown file.")
     else:
@@ -333,8 +334,7 @@ def main():
         
         # Even if no changes, we should update the last scrape date
         state_data['last_scrape_date'] = current_scrape_date
-        with open(STATE_FILE, 'w') as f:
-            json.dump(state_data, f, indent=2)
+        state_repo.save(state_data)
 
     # Send time-based notifications REGARDLESS of whether data changed
     if notifier.is_enabled():
