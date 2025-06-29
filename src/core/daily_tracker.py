@@ -256,17 +256,40 @@ def main():
     old_total_lessons = state_data.get('total_lessons_completed', 0)  # Legacy field
     old_computed_total = state_data.get('computed_total_sessions', 0)  # New computed field
 
-    # Detect changes in various ways
-    has_new_units = bool(newly_completed)
-    has_new_lessons = new_total_lessons > old_total_lessons or new_total_lessons > old_computed_total
+    # === STATE RECONCILIATION ===
+    # Handle duome.eu data window changes (sessions may drop out or be added)
+    current_date = get_current_date()
+    actual_today_sessions = count_todays_lessons(json_data, current_date)
+    stored_daily_sessions = state_data.get('daily_lessons_completed', 0)
     
-    # Update daily lesson counter
-    if new_total_lessons > old_computed_total:
-        new_daily_lessons = new_total_lessons - old_computed_total
-        current_daily_lessons = state_data.get('daily_lessons_completed', 0)
-        state_data['daily_lessons_completed'] = current_daily_lessons + new_daily_lessons
-        print(f"🆕 Found {new_daily_lessons} new sessions today! Total today: {state_data['daily_lessons_completed']}")
-        print(f"   - Breakdown: {new_core_lessons} total lessons, {new_practice_sessions} total practice")
+    # If fresh data total differs significantly from state, reconcile using daily counts
+    total_diff = new_total_lessons - old_computed_total
+    daily_diff = actual_today_sessions - stored_daily_sessions
+    
+    print(f"📊 State reconciliation check:")
+    print(f"   - State total: {old_computed_total} → Fresh data: {new_total_lessons} (diff: {total_diff:+d})")
+    print(f"   - State daily: {stored_daily_sessions} → Actual today: {actual_today_sessions} (diff: {daily_diff:+d})")
+    
+    # Detect changes using multiple approaches
+    has_new_units = bool(newly_completed)
+    
+    # Primary: Check if today's sessions increased (most reliable)
+    has_new_daily_sessions = actual_today_sessions > stored_daily_sessions
+    
+    # Secondary: Check total count increase (but handle data window changes)
+    has_total_increase = new_total_lessons > old_computed_total
+    
+    # Overall: Has new lessons if either daily increased OR total increased significantly
+    has_new_lessons = has_new_daily_sessions or has_total_increase
+    
+    # Update daily counter based on actual data (most reliable)
+    if has_new_daily_sessions:
+        print(f"🆕 Found {daily_diff} new sessions today! Updating daily counter: {stored_daily_sessions} → {actual_today_sessions}")
+        state_data['daily_lessons_completed'] = actual_today_sessions
+    elif total_diff != 0:
+        # Handle data window changes - keep daily count accurate
+        print(f"📉 Data window changed (total: {total_diff:+d}), but daily count stays accurate at {actual_today_sessions}")
+        state_data['daily_lessons_completed'] = actual_today_sessions
     
     last_scrape_date = state_data.get('last_scrape_date', '')
     force_update = current_scrape_date != last_scrape_date
@@ -274,7 +297,9 @@ def main():
     # Log what's happening
     print(f"🔍 Checking for changes...")
     print(f"   - New units completed: {'Yes' if has_new_units else 'No'}")
-    print(f"   - New lessons count: {'Yes' if has_new_lessons else 'No'} ({old_total_lessons} → {new_total_lessons})")
+    print(f"   - New daily sessions: {'Yes' if has_new_daily_sessions else 'No'} ({stored_daily_sessions} → {actual_today_sessions})")
+    print(f"   - Total count changed: {'Yes' if has_total_increase else 'No'} ({old_computed_total} → {new_total_lessons})")
+    print(f"   - Overall new lessons: {'Yes' if has_new_lessons else 'No'}")
     print(f"   - New sessions detected: {'Yes' if has_new_sessions else 'No'}")
     print(f"   - Last scrape date: {last_scrape_date}, Current: {current_scrape_date}")
 
