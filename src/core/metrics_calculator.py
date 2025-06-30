@@ -25,33 +25,43 @@ def count_todays_lessons(json_data, target_date):
     return count
 
 
-def calculate_daily_lesson_goal(state_data):
+def calculate_daily_lesson_goal(state_data, recent_scrape_data=None):
     """
     Calculate how many lessons should be completed per day based on actual performance.
     
-    Uses dynamic lessons-per-unit calculation instead of static estimates.
-    This accounts for actual course difficulty and personal learning patterns.
+    Uses recent unit boundary analysis from "unit review" markers to get accurate
+    lessons-per-unit estimates based on actual course difficulty patterns.
     """
-    # Get current progress
-    # Use total_completed_units if available, otherwise fall back to processed_units count
+    # Get completed units count
     total_completed_units = state_data.get('total_completed_units', len(state_data.get('processed_units', [])))
-    total_lessons_completed = state_data.get('total_lessons_completed', 0)
     remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
     
-    # Calculate DYNAMIC lessons per unit from actual data
-    if total_completed_units > 0:
-        actual_lessons_per_unit = total_lessons_completed / total_completed_units
-        print(f"📊 Dynamic calculation: {actual_lessons_per_unit:.1f} lessons/unit (from {total_lessons_completed} lessons / {total_completed_units} units)")
-    else:
-        # Fallback to base estimate if no units completed yet
-        actual_lessons_per_unit = BASE_LESSONS_PER_UNIT
-        print(f"📊 Using base estimate: {actual_lessons_per_unit} lessons/unit (no completed units yet)")
+    # Try to use recent unit boundary analysis first (most accurate)
+    actual_lessons_per_unit = None
+    if recent_scrape_data and 'recent_unit_analysis' in recent_scrape_data:
+        unit_analysis = recent_scrape_data['recent_unit_analysis']
+        if unit_analysis:
+            actual_lessons_per_unit = unit_analysis['average_lessons_per_unit']
+            print(f"📊 Recent unit boundary analysis: {actual_lessons_per_unit:.1f} lessons/unit")
+            print(f"   Based on {unit_analysis['completed_units_analyzed']} recently completed units with unit review boundaries")
+            for unit in unit_analysis['unit_analysis']:
+                print(f"   - {unit['unit_name']}: {unit['lessons_count']} lessons ({unit['start_date']} to {unit['end_date']})")
+    
+    # Fallback to simple calculation if unit boundary data not available
+    if actual_lessons_per_unit is None:
+        total_lessons_completed = state_data.get('total_lessons_completed', 0)
+        if total_completed_units > 0:
+            actual_lessons_per_unit = total_lessons_completed / total_completed_units
+            print(f"📊 Fallback calculation: {actual_lessons_per_unit:.1f} lessons/unit (total lessons / total units)")
+            print(f"   Warning: This may be inaccurate - mixing historical and recent data")
+        else:
+            actual_lessons_per_unit = BASE_LESSONS_PER_UNIT
+            print(f"📊 Using base estimate: {actual_lessons_per_unit} lessons/unit (no completed units yet)")
     
     # Calculate remaining lessons using dynamic rate
     total_lessons_remaining = remaining_units * actual_lessons_per_unit
     
     # Calculate required daily pace based on time remaining
-    # Note: This should account for elapsed time, but using GOAL_DAYS as approximation
     lessons_per_day = total_lessons_remaining / GOAL_DAYS
     
     print(f"📈 Goal calculation: {remaining_units} units × {actual_lessons_per_unit:.1f} lessons/unit = {total_lessons_remaining:.0f} lessons remaining")
@@ -141,50 +151,6 @@ def calculate_completion_projection(state_data):
         'days_to_completion': days_to_completion if days_to_completion != float('inf') else None,
         'schedule_status': schedule_status,
         'completion_percentage': (total_lessons_completed / total_estimated_lessons * 100) if total_estimated_lessons > 0 else 0
-    }
-
-
-def calculate_unit_completion_metrics(json_data, total_completed_units):
-    """Calculate lessons per unit based on completed units data."""
-    unit_stats = json_data.get('unit_stats', {})
-    
-    # Find completed units (those with unit_completion sessions)
-    completed_units_data = []
-    for unit_name, stats in unit_stats.items():
-        session_types = stats.get('session_types', {})
-        completions = session_types.get('unit_completion', 0)
-        
-        if completions > 0:
-            total_lessons = stats.get('total_combined_lessons', 0)
-            core_lessons = stats.get('total_lessons', 0)
-            practice_sessions = stats.get('total_practice', 0)
-            
-            completed_units_data.append({
-                'name': unit_name,
-                'total_lessons': total_lessons,
-                'core_lessons': core_lessons,
-                'practice_sessions': practice_sessions
-            })
-    
-    if not completed_units_data:
-        return None
-        
-    # Calculate average lessons per unit
-    total_lessons_sum = sum(unit['total_lessons'] for unit in completed_units_data)
-    avg_lessons_per_unit = total_lessons_sum / len(completed_units_data)
-    
-    # Calculate daily requirement
-    remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
-    total_lessons_needed = remaining_units * avg_lessons_per_unit
-    daily_requirement = total_lessons_needed / GOAL_DAYS
-    
-    return {
-        'completed_units_tracked': len(completed_units_data),
-        'avg_lessons_per_unit': avg_lessons_per_unit,
-        'remaining_units': remaining_units,
-        'total_lessons_needed': total_lessons_needed,
-        'daily_requirement': daily_requirement,
-        'completed_units_data': completed_units_data
     }
 
 

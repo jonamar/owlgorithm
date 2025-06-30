@@ -15,6 +15,7 @@ Complete the French Duolingo course in **18 months** (548 days) using data-drive
 ### **1. Accurate Data Collection**
 - Scrapes fresh session data from duome.eu using browser automation
 - Clicks the "aggiorna" update button to ensure current data
+- **ONLY trusts the raw modal data** - all other duome.eu data is chronically inaccurate
 - Counts ALL XP-earning activities as lessons (personalized practice, stories, unit reviews, etc.)
 - **No learning activity is excluded from lesson totals**
 
@@ -23,9 +24,9 @@ Complete the French Duolingo course in **18 months** (548 days) using data-drive
 Current Progress → Lessons Per Unit Average → Remaining Lessons Estimate → Required Daily Pace
 ```
 
-- **Lessons per unit**: Calculated from actual completion data (not static estimates)
-- **Daily goal**: Recalculated based on remaining time and current pace
-- **Projections**: Updated automatically as performance data changes
+- **Lessons per unit**: Calculated from unit boundary analysis using "unit review" markers (not static estimates)
+- **Daily goal**: Recalculated based on remaining time and recent unit completion patterns
+- **Projections**: Updated automatically as new unit boundaries are detected
 
 ### **3. Smart Progress Tracking**
 - **Daily**: Track lessons completed vs dynamic daily goal

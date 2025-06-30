@@ -25,6 +25,37 @@ is_lesson = True  # Every session that earns XP is a lesson
 - Session types do NOT affect whether something counts as a lesson
 - Even "unknown" session types count as lessons
 
+## 🎯 CRITICAL DATA SOURCE REQUIREMENTS
+
+### **ONLY Trust the Raw Modal Data**
+```html
+<!-- TRUSTED: Raw modal data from duome.eu -->
+<div id="raw" class="hidden fancybox-content" style="display: inline-block;">
+  <!-- This contains the ONLY reliable session history -->
+</div>
+```
+
+**CRITICAL REQUIREMENTS:**
+- **ONLY** the `<div id="raw">` modal data is reliable from duome.eu
+- **ALL other** duome.eu displayed data is chronically inaccurate and must be ignored
+- The raw modal **MUST** be refreshed via "aggiorna" button click or data is stale
+- Browser automation with update button click is **REQUIRED** for fresh data
+
+### **Unit Boundary Detection**
+```html
+<!-- Unit completion marker (unit boundary) -->
+<li>2025-06-28 11:10:29 · 120XP  · <span class="cCCC">legendary / unit review</span></li>
+
+<!-- NOT a unit boundary (legendary within unit) -->
+<li>2025-06-27 07:24:35 · 90XP  · <span class="cCCC">legendary / story /practice</span></li>
+```
+
+**Unit Demarcation Rules:**
+- **ONLY "unit review"** sessions mark unit boundaries (end of unit)
+- **"legendary"** without "unit review" are regular lessons within a unit
+- Count lessons between "unit review" markers to calculate lessons per unit
+- Use recent unit boundary analysis for accurate lessons/unit averages
+
 ## 📊 DYNAMIC GOAL CALCULATION SYSTEM
 
 ### **A) Average Lessons Per Unit (Dynamic)**

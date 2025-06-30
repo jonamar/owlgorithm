@@ -9,7 +9,6 @@ from src.core.metrics_calculator import (
     count_todays_lessons,
     calculate_daily_lesson_goal,
     calculate_daily_progress,
-    calculate_unit_completion_metrics,
     calculate_performance_metrics
 )
 
@@ -105,47 +104,6 @@ class TestCalculateDailyProgress:
         assert progress['status'] == 'on_track'
         assert progress['remaining'] == 0
         assert progress['progress_pct'] == 100.0
-
-
-class TestCalculateUnitCompletionMetrics:
-    """Test calculate_unit_completion_metrics function"""
-    
-    def test_calculate_unit_completion_metrics_basic(self, sample_session_data):
-        """Test basic unit completion metrics"""
-        metrics = calculate_unit_completion_metrics(sample_session_data, 86)
-        
-        assert metrics is not None
-        assert metrics['completed_units_tracked'] == 1  # Only Grooming has completion
-        assert metrics['avg_lessons_per_unit'] == 25.0  # Grooming has 25 total lessons
-        assert metrics['remaining_units'] == 186  # 272 - 86
-        assert metrics['total_lessons_needed'] == 186 * 25.0
-        assert metrics['daily_requirement'] > 0
-    
-    def test_calculate_unit_completion_metrics_no_completions(self):
-        """Test with no unit completions"""
-        data = {'unit_stats': {'SomeUnit': {'session_types': {}}}}
-        metrics = calculate_unit_completion_metrics(data, 10)
-        
-        assert metrics is None
-    
-    def test_calculate_unit_completion_metrics_multiple_units(self):
-        """Test with multiple completed units"""
-        data = {
-            'unit_stats': {
-                'Unit1': {
-                    'total_combined_lessons': 20,
-                    'session_types': {'unit_completion': 1}
-                },
-                'Unit2': {
-                    'total_combined_lessons': 30,
-                    'session_types': {'unit_completion': 1}
-                }
-            }
-        }
-        metrics = calculate_unit_completion_metrics(data, 50)
-        
-        assert metrics['completed_units_tracked'] == 2
-        assert metrics['avg_lessons_per_unit'] == 25.0  # (20 + 30) / 2
 
 
 class TestCalculatePerformanceMetrics:

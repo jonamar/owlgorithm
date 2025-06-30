@@ -227,9 +227,12 @@ def parse_session_data(html_content):
         is_unit_completion = False  # Special flag for unit completion tracking
         
         # Classify session type for metadata purposes only
-        if any(keyword in text.lower() for keyword in ["unit review", "legendary", "legendary / unit review"]):
+        # CRITICAL: Only "unit review" marks unit boundaries, not all "legendary" sessions
+        if "unit review" in text.lower():
             session_type = "unit_completion"
             is_unit_completion = True
+        elif "legendary" in text.lower():
+            session_type = "legendary_lesson"  # Legendary within unit, not unit boundary
         elif "personalized practice" in text:
             session_type = "personalized_practice" 
         elif "story /practice" in text or "story / practice" in text:
@@ -362,6 +365,80 @@ def calculate_total_lessons(sessions):
     # Every session is a lesson, so return total count
     return len(sessions)
 
+
+def calculate_recent_lessons_per_unit(sessions):
+    """
+    Calculate lessons per unit based on unit review boundaries in recent data.
+    
+    Uses "unit review" sessions as unit demarcation points to count lessons
+    between unit boundaries. This provides accurate recent performance data.
+    
+    Returns:
+        dict: {
+            'average_lessons_per_unit': float,
+            'completed_units_analyzed': int,
+            'unit_analysis': list of dicts with unit data
+        }
+    """
+    if not sessions:
+        return None
+    
+    # Sort sessions chronologically (oldest first) for proper unit boundary analysis
+    sorted_sessions = sorted(sessions, key=lambda x: x['datetime'])
+    
+    # Find all unit review sessions (unit boundaries)
+    unit_boundaries = []
+    for i, session in enumerate(sorted_sessions):
+        if session.get('is_unit_completion') and 'unit review' in session.get('raw_text', '').lower():
+            unit_boundaries.append({
+                'index': i,
+                'datetime': session['datetime'],
+                'unit': session.get('unit', 'Unknown'),
+                'raw_text': session.get('raw_text', '')
+            })
+    
+    if len(unit_boundaries) < 2:
+        print(f"⚠️ Need at least 2 unit review boundaries for analysis, found {len(unit_boundaries)}")
+        return None
+    
+    # Calculate lessons between unit boundaries
+    unit_analysis = []
+    for i in range(len(unit_boundaries) - 1):
+        start_boundary = unit_boundaries[i]
+        end_boundary = unit_boundaries[i + 1]
+        
+        # Count sessions between boundaries (exclusive of start, inclusive of end)
+        lessons_in_unit = end_boundary['index'] - start_boundary['index']
+        
+        unit_analysis.append({
+            'unit_name': end_boundary['unit'],
+            'lessons_count': lessons_in_unit,
+            'start_date': start_boundary['datetime'][:10],
+            'end_date': end_boundary['datetime'][:10],
+            'completion_session': end_boundary['raw_text']
+        })
+    
+    if not unit_analysis:
+        return None
+    
+    # Calculate average
+    total_lessons = sum(unit['lessons_count'] for unit in unit_analysis)
+    average_lessons_per_unit = total_lessons / len(unit_analysis)
+    
+    print(f"📊 Unit boundary analysis complete:")
+    print(f"   Found {len(unit_boundaries)} unit review boundaries")
+    print(f"   Analyzed {len(unit_analysis)} completed units")
+    for unit in unit_analysis:
+        print(f"   - {unit['unit_name']}: {unit['lessons_count']} lessons ({unit['start_date']} to {unit['end_date']})")
+    print(f"   Average: {average_lessons_per_unit:.1f} lessons per unit")
+    
+    return {
+        'average_lessons_per_unit': average_lessons_per_unit,
+        'completed_units_analyzed': len(unit_analysis),
+        'unit_analysis': unit_analysis,
+        'unit_boundaries': unit_boundaries
+    }
+
 def calculate_unit_stats(sessions):
     """Calculate unit-specific lesson and practice statistics"""
     unit_stats = defaultdict(lambda: {
@@ -424,18 +501,26 @@ def scrape_duome(username, use_automation=True, headless=True):
 
     soup = BeautifulSoup(html_content, 'html.parser')
     
-    # --- Parse main stats for reference (known to be unreliable) ---
+    # =================================================================
+    # CRITICAL DATA SOURCE WARNING:
+    # =================================================================
+    # ONLY the <div id="raw"> modal data is reliable from duome.eu
+    # ALL other duome.eu displayed data is chronically inaccurate
+    # The raw div contains the ONLY trusted session history data
+    # =================================================================
+    
+    # --- Parse main stats for reference (UNRELIABLE - DO NOT USE) ---
     duome_reported_lessons = 0
     try:
         stats_text = soup.get_text()
         lessons_match = re.search(r"Lessons:\s*([\d,]+)", stats_text)
         if lessons_match:
             duome_reported_lessons = int(lessons_match.group(1).replace(',', ''))
-            print(f"📊 Duome reports lessons completed: {duome_reported_lessons} (unreliable)")
+            print(f"📊 Duome reports lessons completed: {duome_reported_lessons} (UNRELIABLE - for reference only)")
     except Exception as e:
         print(f"⚠️ Could not parse duome lessons count: {e}")
 
-    # --- Parse session data from raw div ---
+    # --- Parse session data from raw div (ONLY TRUSTED DATA SOURCE) ---
     raw_div = soup.find('div', {'id': 'raw'})
     if not raw_div:
         print("Error: Could not find raw data section in the page source")
@@ -452,6 +537,9 @@ def scrape_duome(username, use_automation=True, headless=True):
     # Calculate statistics
     daily_stats = calculate_daily_stats(sessions)
     unit_stats = calculate_unit_stats(sessions)
+    
+    # Calculate recent lessons per unit from unit review boundaries
+    recent_unit_analysis = calculate_recent_lessons_per_unit(sessions)
     
     # Compute accurate totals from session data
     computed_lessons = sum(1 for s in sessions if s.get('is_lesson', False))
@@ -471,7 +559,8 @@ def scrape_duome(username, use_automation=True, headless=True):
         'sessions': sessions,
         'daily_stats': daily_stats,
         'unit_stats': unit_stats,
-        'unit_transitions': {unit: dt.isoformat() for unit, dt in unit_transitions.items()}
+        'unit_transitions': {unit: dt.isoformat() for unit, dt in unit_transitions.items()},
+        'recent_unit_analysis': recent_unit_analysis  # New: lessons per unit from unit boundaries
     }
     
     # Generate output filename in data directory

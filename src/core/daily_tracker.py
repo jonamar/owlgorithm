@@ -27,7 +27,6 @@ from .metrics_calculator import (
     count_todays_lessons,
     calculate_daily_lesson_goal, 
     calculate_daily_progress,
-    calculate_unit_completion_metrics,
     calculate_performance_metrics
 )
 from .markdown_updater import update_markdown_file

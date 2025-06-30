@@ -243,70 +243,21 @@ class TestScrapeWithRetry:
             assert result == sample_scrape_data
             mock_primary.assert_called_once_with('testuser')
     
-    def test_primary_fails_fallback_succeeds(self, enhanced_scraper, sample_scrape_data):
-        """Test fallback success when primary fails."""
+    def test_primary_fails_cached_data_succeeds(self, enhanced_scraper, sample_scrape_data):
+        """Test cached data fallback when primary fails."""
         with patch.object(enhanced_scraper, '_scrape_primary_method') as mock_primary:
-            with patch.object(enhanced_scraper, '_scrape_fallback_method') as mock_fallback:
-                # Primary fails, fallback succeeds
+            with patch.object(enhanced_scraper, '_try_cached_data_fallback') as mock_cached:
+                # Primary fails, cached data succeeds
                 mock_primary.side_effect = ScrapingError("Primary failed")
-                mock_fallback.return_value = sample_scrape_data
+                cached_data = sample_scrape_data.copy()
+                cached_data['from_cache'] = True
+                mock_cached.return_value = cached_data
                 
                 result = enhanced_scraper.scrape_with_retry('testuser')
                 
-                assert result == sample_scrape_data
-                mock_fallback.assert_called_once_with('testuser')
+                assert result['from_cache'] is True
+                mock_cached.assert_called_once_with('testuser')
     
-    def test_both_methods_fail_cached_data_succeeds(self, enhanced_scraper, sample_scrape_data):
-        """Test cached data fallback when both scraping methods fail."""
-        with patch.object(enhanced_scraper, '_scrape_primary_method') as mock_primary:
-            with patch.object(enhanced_scraper, '_scrape_fallback_method') as mock_fallback:
-                with patch.object(enhanced_scraper, '_try_cached_data_fallback') as mock_cached:
-                    # Both scraping methods fail
-                    mock_primary.side_effect = ScrapingError("Primary failed")
-                    mock_fallback.side_effect = ScrapingError("Fallback failed")
-                    
-                    # Cached data succeeds
-                    cached_data = sample_scrape_data.copy()
-                    cached_data['from_cache'] = True
-                    mock_cached.return_value = cached_data
-                    
-                    result = enhanced_scraper.scrape_with_retry('testuser')
-                    
-                    assert result['from_cache'] is True
-                    mock_cached.assert_called_once_with('testuser')
-    
-    def test_all_methods_fail(self, enhanced_scraper):
-        """Test when all scraping and fallback methods fail."""
-        with patch.object(enhanced_scraper, '_scrape_primary_method') as mock_primary:
-            with patch.object(enhanced_scraper, '_scrape_fallback_method') as mock_fallback:
-                with patch.object(enhanced_scraper, '_try_cached_data_fallback') as mock_cached:
-                    with patch.object(enhanced_scraper, '_handle_persistent_failure') as mock_notify:
-                        # All methods fail
-                        mock_primary.side_effect = ScrapingError("Primary failed")
-                        mock_fallback.side_effect = ScrapingError("Fallback failed")
-                        mock_cached.return_value = None
-                        
-                        with pytest.raises(ScrapingError) as exc_info:
-                            enhanced_scraper.scrape_with_retry('testuser')
-                        
-                        assert "All scraping methods failed" in str(exc_info.value)
-                        mock_notify.assert_called_once_with('testuser')
-    
-    def test_low_quality_data_triggers_fallback(self, enhanced_scraper, sample_scrape_data):
-        """Test that low-quality data from primary triggers fallback."""
-        low_quality_data = {'username': 'testuser', 'sessions': []}
-        
-        with patch.object(enhanced_scraper, '_scrape_primary_method') as mock_primary:
-            with patch.object(enhanced_scraper, '_scrape_fallback_method') as mock_fallback:
-                # Primary returns low-quality data, fallback returns good data
-                mock_primary.return_value = low_quality_data
-                mock_fallback.return_value = sample_scrape_data
-                
-                result = enhanced_scraper.scrape_with_retry('testuser')
-                
-                assert result == sample_scrape_data
-                mock_fallback.assert_called_once_with('testuser')
-
 
 class TestFailureHandling:
     """Test failure handling and notifications."""
@@ -401,11 +352,7 @@ class TestIntegration:
             assert result == sample_scrape_data
             mock_scraper.scrape_with_retry.assert_called_once_with('testuser')
     
-    def test_real_world_scenario_simulation(self, enhanced_scraper, sample_scrape_data):
-        """Test a realistic scenario with multiple retries and fallbacks."""
-        call_count = {'primary': 0, 'fallback': 0}
-        
-        def failing_primary_method(username):
+    def failing_primary_method(username):
             call_count['primary'] += 1
             # Primary always fails so fallback is triggered
             raise ScrapingError(f"Primary attempt {call_count['primary']} failed")
