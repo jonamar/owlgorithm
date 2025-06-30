@@ -391,75 +391,136 @@ def calculate_total_lessons(sessions):
 
 def calculate_recent_lessons_per_unit(sessions):
     """
-    Calculate lessons per unit based on unit review boundaries in recent data.
+    Calculate lessons per unit using Algorithm 1: "First Mention = Unit Start" with Sub-unit Folding.
     
-    Uses "unit review" sessions as unit demarcation points to count lessons
-    between unit boundaries. This provides accurate recent performance data.
+    Algorithm:
+    1. Detect unit boundaries by first mention of unit name (chronologically)
+    2. Assign ALL XP-earning sessions to the currently active unit
+    3. Fold small units (<8 lessons) into adjacent units when appropriate
+    4. Exclude current incomplete unit from average calculation
     
     Returns:
         dict: {
             'average_lessons_per_unit': float,
             'completed_units_analyzed': int,
-            'unit_analysis': list of dicts with unit data
+            'unit_analysis': list of dicts with unit data,
+            'algorithm': 'first_mention_with_folding'
         }
     """
     if not sessions:
         return None
     
-    # Sort sessions chronologically (oldest first) for proper unit boundary analysis
+    # Sort sessions chronologically (oldest first) for proper unit detection
     sorted_sessions = sorted(sessions, key=lambda x: x['datetime'])
     
-    # Find all unit review sessions (unit boundaries)
+    # Step 1: Detect unit boundaries by first mention
     unit_boundaries = []
-    for i, session in enumerate(sorted_sessions):
-        if session.get('is_unit_completion') and 'unit review' in session.get('raw_text', '').lower():
+    seen_units = set()
+    
+    for session in sorted_sessions:
+        if session.get('unit') and session['unit'] not in seen_units:
+            seen_units.add(session['unit'])
             unit_boundaries.append({
-                'index': i,
-                'datetime': session['datetime'],
-                'unit': session.get('unit', 'Unknown'),
-                'raw_text': session.get('raw_text', '')
+                'unit': session['unit'],
+                'start_datetime': session['datetime']
             })
+            print(f"📊 Unit boundary detected: {session['unit']} starts at {session['datetime']}")
     
     if len(unit_boundaries) < 2:
-        print(f"⚠️ Need at least 2 unit review boundaries for analysis, found {len(unit_boundaries)}")
+        print(f"⚠️ Need at least 2 units for analysis, found {len(unit_boundaries)}")
         return None
     
-    # Calculate lessons between unit boundaries
-    unit_analysis = []
-    for i in range(len(unit_boundaries) - 1):
-        start_boundary = unit_boundaries[i]
-        end_boundary = unit_boundaries[i + 1]
-        
-        # Count sessions between boundaries (exclusive of start, inclusive of end)
-        lessons_in_unit = end_boundary['index'] - start_boundary['index']
-        
-        unit_analysis.append({
-            'unit_name': end_boundary['unit'],
-            'lessons_count': lessons_in_unit,
-            'start_date': start_boundary['datetime'][:10],
-            'end_date': end_boundary['datetime'][:10],
-            'completion_session': end_boundary['raw_text']
-        })
+    # Step 2: Assign ALL sessions to units based on chronological active unit
+    unit_session_counts = defaultdict(int)
+    current_unit = None
     
-    if not unit_analysis:
+    for session in sorted_sessions:
+        # Update current unit if this session has an explicit unit
+        if session.get('unit'):
+            current_unit = session['unit']
+        
+        # Count ALL sessions as lessons for the current unit
+        if current_unit:
+            unit_session_counts[current_unit] += 1
+    
+    # Step 3: Exclude current incomplete unit (last unit in sequence)
+    unit_sequence = [b['unit'] for b in unit_boundaries]
+    if unit_sequence:
+        current_unit_name = unit_sequence[-1]
+        print(f"📊 Excluding current incomplete unit: {current_unit_name}")
+        completed_units = {unit: count for unit, count in unit_session_counts.items() 
+                          if unit != current_unit_name}
+    else:
+        completed_units = dict(unit_session_counts)
+    
+    # Step 4: Apply sub-unit folding for small units
+    final_unit_counts = {}
+    folded_units = set()
+    
+    for i, unit in enumerate(unit_sequence[:-1]):  # Exclude current unit
+        if unit in folded_units:
+            continue
+            
+        lesson_count = completed_units.get(unit, 0)
+        
+        if lesson_count < 8:  # Small unit - check for folding
+            # Find adjacent unit to fold into
+            target_unit = None
+            if i > 0:
+                target_unit = unit_sequence[i-1]
+            elif i < len(unit_sequence) - 2:  # Not current unit
+                target_unit = unit_sequence[i+1]
+            
+            if target_unit and target_unit in completed_units:
+                print(f"📊 Folding {unit} ({lesson_count} lessons) into {target_unit}")
+                if target_unit not in final_unit_counts:
+                    final_unit_counts[target_unit] = completed_units[target_unit]
+                final_unit_counts[target_unit] += lesson_count
+                folded_units.add(unit)
+            else:
+                final_unit_counts[unit] = lesson_count
+        else:
+            final_unit_counts[unit] = lesson_count
+    
+    if not final_unit_counts:
+        print("⚠️ No completed units found for analysis")
         return None
     
     # Calculate average
-    total_lessons = sum(unit['lessons_count'] for unit in unit_analysis)
-    average_lessons_per_unit = total_lessons / len(unit_analysis)
+    total_lessons = sum(final_unit_counts.values())
+    num_units = len(final_unit_counts)
+    average_lessons_per_unit = total_lessons / num_units
     
-    print(f"📊 Unit boundary analysis complete:")
-    print(f"   Found {len(unit_boundaries)} unit review boundaries")
-    print(f"   Analyzed {len(unit_analysis)} completed units")
-    for unit in unit_analysis:
-        print(f"   - {unit['unit_name']}: {unit['lessons_count']} lessons ({unit['start_date']} to {unit['end_date']})")
+    # Step 5: Build unit analysis details
+    unit_analysis = []
+    for unit, lesson_count in final_unit_counts.items():
+        # Find start date for this unit
+        start_date = None
+        for boundary in unit_boundaries:
+            if boundary['unit'] == unit:
+                start_date = boundary['start_datetime'][:10]
+                break
+        
+        unit_analysis.append({
+            'unit_name': unit,
+            'lessons_count': lesson_count,
+            'start_date': start_date or 'Unknown',
+            'algorithm': 'first_mention_with_folding'
+        })
+    
+    print(f"📊 Algorithm 1 unit analysis complete:")
+    print(f"   Detected {len(unit_boundaries)} unit boundaries")
+    print(f"   Analyzed {len(final_unit_counts)} completed units")
+    for unit_data in unit_analysis:
+        print(f"   - {unit_data['unit_name']}: {unit_data['lessons_count']} lessons (started {unit_data['start_date']})")
     print(f"   Average: {average_lessons_per_unit:.1f} lessons per unit")
     
     return {
         'average_lessons_per_unit': average_lessons_per_unit,
-        'completed_units_analyzed': len(unit_analysis),
+        'completed_units_analyzed': len(final_unit_counts),
         'unit_analysis': unit_analysis,
-        'unit_boundaries': unit_boundaries
+        'algorithm': 'first_mention_with_folding',
+        'total_lessons_analyzed': total_lessons
     }
 
 def calculate_unit_stats(sessions):

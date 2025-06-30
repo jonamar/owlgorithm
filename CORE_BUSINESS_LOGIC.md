@@ -37,36 +37,42 @@ is_lesson = True  # Every session that earns XP is a lesson
 - **MUST** click "aggiorna" button to refresh or data is stale
 - HTTP requests without automation return outdated data
 
-### **Unit Boundary Detection Rules**
+### **Unit Boundary Detection Rules (Algorithm 1)**
 
 ```html
-<!-- UNIT BOUNDARY (end of unit) -->
-<li>...· <span class="cCCC">legendary / unit review</span></li>
+<!-- UNIT START (first mention of unit name) -->
+<li>...XP <a href="/skill/fr/UnitName">UnitName</a> · lesson</li>
 
-<!-- NOT A BOUNDARY (lesson within unit) -->  
-<li>...· <span class="cCCC">legendary / story /practice</span></li>
+<!-- ALL SUBSEQUENT SESSIONS belong to this unit until new unit mentioned -->  
+<li>...XP · <span class="cCCC">personalized practice</span></li>
 ```
 
 **Detection rules:**
-- **ONLY** "unit review" sessions mark unit boundaries
-- "legendary" without "unit review" are regular lessons within a unit
-- Count lessons between unit review markers for accurate lessons-per-unit
+- **First mention** of unit name chronologically = unit start
+- **ALL XP-earning sessions** after unit start belong to that unit
+- **Sub-units** (<8 lessons) get folded into adjacent units when appropriate
 
 ## 📊 DYNAMIC CALCULATION REQUIREMENTS
 
-### **Lessons Per Unit Calculation**
+### **Lessons Per Unit Calculation - Algorithm 1**
 
 ```python
-# Use recent unit boundary analysis (most accurate)
-lessons_per_unit = analyze_unit_boundaries(recent_sessions)
+# ALGORITHM 1: "First Mention = Unit Start" with Sub-unit Folding
+# 1. Detect unit boundaries: First mention of unit name = unit start
+# 2. Assign ALL XP sessions to currently active unit (including practice)
+# 3. Fold small units (<8 lessons) into adjacent units when appropriate
+lessons_per_unit = calculate_using_first_mention_algorithm(recent_sessions)
 
+# NOT unit review markers (too complex/unreliable)
 # NOT static estimates or total_lessons / total_units mixing timeframes
 ```
 
-**Requirements:**
-- Use unit boundary analysis from recent data (unit review markers)
-- Recent average: ~19.0 lessons/unit (realistic, not 2.1 from mixed timeframes)
-- Update projections as new unit boundaries detected
+**Algorithm Requirements:**
+- **Unit Boundaries**: First mention of unit name chronologically
+- **Session Assignment**: ALL XP-earning sessions count as lessons for active unit
+- **Sub-unit Folding**: Units <8 lessons adjacent to same unit get merged
+- **Exclusions**: Skip current incomplete unit and units without reliable start points
+- **Target Average**: ~37 lessons/unit (validated: 36.8 from production data)
 
 ### **Goal Calculation Chain**
 
