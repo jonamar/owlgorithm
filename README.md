@@ -1,145 +1,182 @@
-# Duolingo Daily Lesson Tracker
+# 🦉 Owlgorithm: Data-Driven Duolingo Course Completion Tracker
 
-A Python tool to track your daily Duolingo progress by scraping data from **duome.eu** and computing accurate statistics. The tracker automatically refreshes your duome.eu data, parses your lesson history, and generates detailed progress reports.
+**A sophisticated progress tracking system for completing the entire French Duolingo course (272 units) within 18 months using dynamic goal calculation and accurate lesson counting.**
 
-## 🎯 What This Does
+## 🎯 Project Mission
 
-- **Accurate Lesson Tracking**: Computes total lessons from raw session data (more reliable than duome.eu metrics)
-- **Auto-Refresh**: Clicks the update button on duome.eu to refresh your latest progress
-- **Session Classification**: Distinguishes between core lessons and practice sessions
-- **Progress Markdown**: Updates a markdown file with your progress statistics
-- **Push Notifications**: Sends alerts when new lessons are completed
-- **Projection Model**: Estimates time needed to complete your language track
+Complete the French Duolingo course in **18 months** (548 days) using data-driven progress tracking that:
+- Accurately counts ALL learning activities (not just "lessons")
+- Dynamically adjusts daily goals based on actual performance
+- Provides realistic completion projections
+- Tracks actual lessons-per-unit averages (varies by difficulty)
+
+## 🔄 How It Works
+
+### **1. Accurate Data Collection**
+- Scrapes fresh session data from duome.eu using browser automation
+- Clicks the "aggiorna" update button to ensure current data
+- Counts ALL XP-earning activities as lessons (personalized practice, stories, unit reviews, etc.)
+- **No learning activity is excluded from lesson totals**
+
+### **2. Dynamic Goal Calculation**
+```
+Current Progress → Lessons Per Unit Average → Remaining Lessons Estimate → Required Daily Pace
+```
+
+- **Lessons per unit**: Calculated from actual completion data (not static estimates)
+- **Daily goal**: Recalculated based on remaining time and current pace
+- **Projections**: Updated automatically as performance data changes
+
+### **3. Smart Progress Tracking**
+- **Daily**: Track lessons completed vs dynamic daily goal
+- **Weekly**: Analyze trends and adjust pace
+- **Overall**: Monitor progress toward 18-month completion target
+- **Projections**: Estimate actual completion date based on current performance
 
 ## 🚀 Quick Start
 
-### 1. Set Up Virtual Environment
-```bash
-python -m venv duolingo_env
-source duolingo_env/bin/activate  # On Windows: duolingo_env\Scripts\activate
-```
-
-### 2. Install Dependencies
-```bash
-pip install selenium requests beautifulsoup4 argparse
-```
-
-### 3. Project Setup (one-time)
-```bash
-python scripts/setup.py --all   # checks deps, creates folders, configures notifications
-```
-
-### 4. Run Daily Update
-```bash
-python scripts/daily_update.py
-# optional: -u <username>
-```
-
-## 📊 What Data You Get
-
-### JSON Output Files
-Detailed session data in JSON format with:
-- Computed lesson count (core lessons + practice sessions)
-- Daily statistics breakdown
-- Unit completion tracking
-- Session classification (lessons vs. practice)
-- Historical timestamps
-
-### Markdown Progress Report
-- Updated summary of your language progress
-- Completed and remaining units
-- Total lessons completed (with core/practice breakdown)
-- Lessons per day required to reach goal
-- Time needed per day to complete course
-
-## 🔧 Usage Examples
-
-### Running the Scraper Only
-```bash
-# Activate environment
-source duolingo_env/bin/activate
-
-# Just collect raw session data without updating markdown
-python duome_raw_scraper.py --username YOUR_USERNAME
-```
-
-### Refresh Duome Data Only
-```bash
-# Force refresh of your duome.eu stats without running full tracker
-python duome_raw_scraper.py --username YOUR_USERNAME --update-only
-```
-
-## 📁 Output Files
-
-After running the tracker, you'll get:
-- `duome_raw_YOUR_USERNAME_TIMESTAMP.json` - Raw session data with computed metrics
-- `personal-math.md` - Markdown progress report with updated stats
-- `tracker_state.json` - Tracking state to avoid duplicate notifications
-- `tracker.log` - Execution logs with detailed output
-
-## 🔁 Scheduling Options
-
-### macOS (launchd) - Recommended
-```bash
-# Check if service is loaded and running
-launchctl list | grep owlgorithm
-
-# Load the service (if not already loaded)
-launchctl load ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
-
-# View logs
-tail -f /Users/jonamar/Documents/owlgorithm/logs/tracker.log
-```
-
-### Linux (cron)
-```bash
-# Add to crontab for daily automatic refresh and tracking
-0 23 * * * cd /path/to/owlgorithm && /usr/bin/python3 scripts/daily_update.py
-```
-
-### Windows (Task Scheduler)
-Create a daily task that runs:
-```bash
-cd C:\path\to\owlgorithm && python daily_tracker.py
-```
-
-## 🔧️ Requirements
-
+### **Prerequisites**
 - Python 3.7+
-- Firefox browser installed
-- Selenium WebDriver with geckodriver (auto-installed)
-- Virtual environment with required packages
-- Internet connection
-- Public duome.eu profile (username must exist on duome.eu)
+- Firefox browser (for automation)
+- duome.eu account access
 
-## 📈 Data Analysis
+### **Installation**
+```bash
+# 1. Set up environment
+python -m venv duolingo_env
+source duolingo_env/bin/activate  # Windows: duolingo_env\Scripts\activate
 
-Import the CSV files into:
-- **Excel/Google Sheets**: For charts and pivot tables
-- **Python/Pandas**: For advanced analysis
-- **Tableau/Power BI**: For dashboards
+# 2. Install dependencies
+pip install -r requirements.txt
 
-## ❓ Troubleshooting
+# 3. Project setup (one-time)
+python scripts/setup.py --all
+```
 
-### Profile Not Found
-- Verify your username exists at `https://duome.eu/YOUR_USERNAME`
-- Ensure your Duolingo profile is public
+### **Daily Usage**
+```bash
+# Run complete daily update (recommended via automation)
+python scripts/daily_update.py
 
-### No Daily Data
-- duome.eu may need time to collect your activity
-- Try running the scraper after completing some lessons
+# Manual scraping only
+python src/scrapers/duome_raw_scraper.py --username jonamar
 
-### Rate Limiting
-- The scraper includes respectful delays
-- If blocked, wait and try again later
+# Analysis only
+python scripts/analyze.py
+```
 
-## 🔗 Related Links
+## 📊 What You Get
 
-- [duome.eu](https://duome.eu) - Duolingo statistics platform
-- [Your Profile](https://duome.eu/jonamar) - View your stats online
+### **Real-Time Progress Tracking**
+- **Accurate lesson counts**: All learning activities counted properly
+- **Dynamic daily goals**: Adjusted based on actual performance and remaining time
+- **Completion projections**: Data-driven estimates of course completion
+- **Unit progression**: Track lessons per unit and difficulty progression
 
-## 📝 Notes
+### **Automated Reporting**
+- **Markdown reports**: Updated progress summaries in `personal-math.md`
+- **JSON data files**: Detailed session data for analysis
+- **Push notifications**: Daily progress alerts via Pushover
+- **Goal adjustments**: Automatic recalculation of required daily pace
 
-This tool scrapes publicly available data from duome.eu and does not require Duolingo credentials. It's designed to be respectful of duome.eu's servers with appropriate delays between requests.
+### **Key Metrics**
+```
+📈 Progress Metrics:
+   • Total lessons completed: 179 (was 55 before fix!)
+   • Units completed: 86 / 272
+   • Current pace: X lessons/day
+   • Required pace: Y lessons/day
+   • Projected completion: Date
 
-The unofficial Duolingo API is currently blocked (2024-2025), making duome.eu the best alternative for detailed progress tracking. 
+📊 Performance Analytics:
+   • Lessons per unit average: Z (dynamic)
+   • Daily goal achievement rate
+   • Weekly progression trends
+   • Ahead/behind schedule status
+```
+
+## ⚙️ Core Configuration
+
+### **Project Parameters** (`config/app_config.py`)
+```python
+USERNAME = "jonamar"
+TOTAL_UNITS_IN_COURSE = 272    # French course total
+GOAL_DAYS = 548                # 18 months
+```
+
+### **Dynamic Calculations** (Auto-updated)
+- `lessons_per_unit`: Calculated from actual completion data
+- `daily_goal`: Based on remaining lessons and time
+- `completion_projection`: Estimated finish date
+
+## 🏗️ Architecture
+
+### **Core Components**
+- **Scrapers** (`src/scrapers/`): Browser automation, data extraction
+- **Core Logic** (`src/core/`): Progress calculation, goal management
+- **Notifiers** (`src/notifiers/`): Progress alerts and updates
+- **Data Layer** (`src/data/`): State management, atomic operations
+
+### **Key Files**
+- `tracker_state.json`: Current progress and goals
+- `personal-math.md`: Human-readable progress report
+- `CORE_BUSINESS_LOGIC.md`: **Critical business rules (READ THIS)**
+- `IMPROVEMENT_ROADMAP.md`: Technical development roadmap
+
+## 🚨 Critical Business Logic
+
+**⚠️ REQUIRED READING**: This project has specific business requirements that must be preserved during any development work.
+
+### **📋 [CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md) ← READ THIS FIRST**
+
+**Essential Principles:**
+1. **ALL XP-earning sessions count as lessons** (no exclusions)
+2. **Dynamic goal calculation** based on actual performance data
+3. **18-month completion target** with adaptive daily goals
+4. **Historical data integrity** when making changes
+
+**Developer Protection Rules:**
+- Lesson counting logic must never exclude valid learning activities
+- Goal calculations must remain dynamic and data-driven  
+- Any changes affecting progress tracking require historical recalculation
+- Session types are metadata only - they do NOT affect lesson counting
+
+**⚠️ BREAKING THESE RULES WILL CORRUPT PROGRESS TRACKING ⚠️**
+
+## 🎯 Project Status
+
+**Current Progress** (as of latest run):
+- ✅ **179 total lessons** completed (corrected from previous 55)
+- ✅ **86 units completed** out of 272 total
+- ✅ **Dynamic goal calculation** implemented
+- ✅ **Accurate lesson counting** for all session types
+- ✅ **Automated daily tracking** via launchd
+
+**Next Milestones**:
+- Enhanced progress projections
+- Weekly trend analysis
+- Completion timeline optimization
+
+## 📚 Documentation
+
+### **Critical Documents**
+- **[CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md)**: ⚠️ **MUST READ** - Immutable business requirements
+  
+### **Development Documents**  
+- **[CLAUDE.md](CLAUDE.md)**: Developer guidance and commands
+- **[IMPROVEMENT_ROADMAP.md](IMPROVEMENT_ROADMAP.md)**: Technical development roadmap
+
+## 🤝 Contributing
+
+**For Developers**: 
+1. **Read `CORE_BUSINESS_LOGIC.md` first** - contains immutable business requirements
+2. Lesson counting logic must never exclude valid learning activities  
+3. Goal calculations must remain dynamic and data-driven
+4. Any changes affecting progress tracking require historical recalculation
+
+**For Future Maintainers**:
+This system tracks progress toward a specific 18-month goal using dynamic calculations. The core lesson counting and goal calculation logic is business-critical and must be preserved during any refactoring or feature additions.
+
+---
+
+*Goal: Complete 272 French units in 548 days using data-driven progress tracking.*

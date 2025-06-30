@@ -13,7 +13,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from .retry_handler import RetryHandler, RetryConfig, ErrorType
-from .duome_raw_scraper import fetch_duome_data_with_update, fetch_duome_data
+from .duome_raw_scraper import fetch_duome_data_with_update
+# NOTE: fetch_duome_data (HTTP fallback) removed - it only returns stale cached data
+# See: https://github.com/user/repo/issues/XXX for details on data freshness testing
 from ..data.data_manager import DataManager, DataAccessError
 from ..notifiers.pushover_notifier import PushoverNotifier
 from config import app_config as cfg
@@ -110,24 +112,11 @@ class EnhancedScraper:
         except Exception as e:
             self.logger.error(f"Primary scraping failed after retries: {e}")
             
-        # Try fallback scraping method
-        try:
-            data = self.retry_handler.execute_with_retry(
-                lambda: self._scrape_fallback_method(username),
-                operation_name=f"scrape_fallback_{username}",
-                custom_config=RetryConfig(max_attempts=3)  # Fewer attempts for fallback
-            )
-            
-            self.logger.info("Fallback scraping succeeded")
-            
-            if self._validate_data_quality(data):
-                self._save_scrape_data(data, username)
-                return data
-            else:
-                self.logger.warning("Fallback scrape data quality insufficient")
-                
-        except Exception as e:
-            self.logger.error(f"Fallback scraping failed: {e}")
+        # HTTP fallback method REMOVED - it only returns stale cached data
+        # Testing confirmed that duome.eu serves stale data unless the "aggiorna" 
+        # update button is clicked via browser automation. HTTP requests bypass this
+        # mechanism and return outdated session data, making them useless for real-time tracking.
+        self.logger.warning("Primary scraping failed, only cached data fallback available")
         
         # Try cached data fallback
         cached_data = self._try_cached_data_fallback(username)
@@ -173,39 +162,21 @@ class EnhancedScraper:
         
         return data
     
-    def _scrape_fallback_method(self, username: str) -> Dict[str, Any]:
-        """
-        Fallback scraping method using direct HTTP requests.
-        
-        Args:
-            username: Username to scrape
-            
-        Returns:
-            Scraped data
-            
-        Raises:
-            Exception: If scraping fails
-        """
-        self.logger.info("Attempting fallback scraping method (HTTP requests)")
-        
-        # Use the simpler HTTP-based scraper
-        page_source = fetch_duome_data(username)
-        
-        if not page_source:
-            raise ScrapingError("HTTP scraping returned no data")
-        
-        # Parse the page source
-        from .duome_raw_scraper import parse_session_data
-        data = parse_session_data(page_source)
-        
-        # Add username and timestamp
-        data['username'] = username
-        data['scraped_at'] = datetime.now().isoformat()
-        
-        if not data or not data.get('sessions'):
-            raise ScrapingError("No session data extracted from HTTP response")
-        
-        return data
+    # _scrape_fallback_method REMOVED
+    # 
+    # CRITICAL: HTTP-based fallback scraping does NOT work for duome.eu
+    # 
+    # Problem: duome.eu serves stale cached session data unless the "aggiorna" update 
+    # button is clicked through browser automation. Direct HTTP requests bypass this 
+    # refresh mechanism and return outdated data.
+    # 
+    # Evidence: Testing on 2025-06-30 confirmed that:
+    # - HTTP method: Showed 6 sessions, most recent from 08:33:07
+    # - Browser method: Showed 7 sessions, most recent from 09:20:12
+    # - User completed lesson at ~09:20, only browser method detected it
+    # 
+    # Therefore: Browser automation with update button click is REQUIRED for fresh data.
+    # HTTP fallbacks create false confidence while returning stale data.
     
     def _validate_data_quality(self, data: Dict[str, Any]) -> bool:
         """

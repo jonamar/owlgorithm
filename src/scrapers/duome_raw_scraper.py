@@ -147,7 +147,20 @@ def setup_firefox_driver(headless=True):
 
 
 def fetch_duome_data(username):
-    """Fallback method: Fetch raw data from duome.eu without automation"""
+    """
+    DEPRECATED: Fetch raw data from duome.eu without automation
+    
+    WARNING: This method DOES NOT work for getting fresh data!
+    
+    duome.eu serves stale cached session data unless the "aggiorna" update 
+    button is clicked via browser automation. This HTTP-only method bypasses 
+    that refresh mechanism and returns outdated data.
+    
+    Confirmed 2025-06-30: HTTP method failed to detect new lesson completed
+    at 09:20, while browser automation detected it immediately.
+    
+    Use fetch_duome_data_with_update() instead for reliable fresh data.
+    """
     url = f"https://duome.eu/{username}"
     print(f"Fetching data from {url} (fallback method)...")
     
@@ -196,26 +209,34 @@ def parse_session_data(html_content):
         # Parse datetime
         dt = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
         
-        # Determine session type and unit
-        session_type = "unknown"
-        unit = None
-        is_lesson = False
-        is_unit_completion = False  # New: track unit completion lessons
+        # =================================================================
+        # LESSON COUNTING LOGIC - CORE PRINCIPLE:
+        # =================================================================
+        # ALL XP-earning sessions are lessons, regardless of type/subclass.
+        # Session types are metadata only - they do NOT affect lesson counting.
+        # This ensures no learning activity is excluded from lesson totals.
+        # =================================================================
         
-        # Check for lesson indicator
-        if "· lesson" in text:
-            is_lesson = True
-            
-        # Check for unit completion indicators (unit review, legendary)
+        # CORE LESSON COUNT: Every session that earns XP is a lesson
+        is_lesson = True  # ALWAYS TRUE - all sessions count as lessons
+        
+        # METADATA ONLY: Classify session types for reporting/analysis
+        # These classifications do NOT affect whether it counts as a lesson
+        session_type = "unknown"  # Default metadata classification
+        unit = None
+        is_unit_completion = False  # Special flag for unit completion tracking
+        
+        # Classify session type for metadata purposes only
         if any(keyword in text.lower() for keyword in ["unit review", "legendary", "legendary / unit review"]):
-            is_unit_completion = True
             session_type = "unit_completion"
-            
-        # Check for personalized practice
+            is_unit_completion = True
         elif "personalized practice" in text:
-            session_type = "personalized_practice"
+            session_type = "personalized_practice" 
         elif "story /practice" in text or "story / practice" in text:
-            session_type = "story"
+            session_type = "story_practice"
+        elif "· lesson" in text:
+            session_type = "unit_lesson"
+        # Note: Even "unknown" session types count as lessons (is_lesson = True)
         else:
             # Look for unit name in skill links
             skill_links = item.find_all('a', href=re.compile(r'/skill/fr/'))
@@ -320,21 +341,26 @@ def calculate_daily_stats(sessions):
         daily_stats[date]['total_xp'] += session['xp']
         daily_stats[date]['session_types'][session['session_type']] += 1
         
-        if session['is_lesson']:
-            daily_stats[date]['total_lessons'] += 1
-        elif session['session_type'] == 'personalized_practice':
+        # Since ALL sessions are lessons now (is_lesson=True always), this simplifies:
+        daily_stats[date]['total_lessons'] += 1
+        
+        # Legacy practice count (for historical compatibility)
+        # Note: This is now always 0 since all sessions count as lessons
+        if session['session_type'] == 'personalized_practice':
             daily_stats[date]['total_practice'] += 1
     
     # Convert to regular dict and sort by date
     return dict(sorted(daily_stats.items(), reverse=True))
 
 def calculate_total_lessons(sessions):
-    """Compute total lessons from session data"""
-    total_lessons = 0
-    for session in sessions:
-        if session['is_lesson']:
-            total_lessons += 1
-    return total_lessons
+    """
+    Compute total lessons from session data
+    
+    CORE PRINCIPLE: ALL sessions count as lessons.
+    Since is_lesson=True for every session, this equals total session count.
+    """
+    # Every session is a lesson, so return total count
+    return len(sessions)
 
 def calculate_unit_stats(sessions):
     """Calculate unit-specific lesson and practice statistics"""
