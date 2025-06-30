@@ -11,24 +11,38 @@ import tempfile
 import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from contextlib import contextmanager
+
+# Import migration framework
+try:
+    from .migrations.migrator import ensure_schema_version, CURRENT_SCHEMA_VERSION
+    MIGRATIONS_AVAILABLE = True
+except ImportError:
+    MIGRATIONS_AVAILABLE = False
 
 
 class AtomicJSONRepository:
-    """Atomic JSON file operations with corruption recovery."""
+    """Atomic JSON file operations with corruption recovery and schema versioning."""
     
-    def __init__(self, file_path: str, backup_dir: Optional[str] = None):
+    def __init__(self, file_path: str, backup_dir: Optional[str] = None, 
+                 auto_migrate: bool = True, target_version: Optional[str] = None):
         """
         Initialize atomic JSON repository.
         
         Args:
             file_path: Path to the JSON file
             backup_dir: Directory for backups (defaults to same dir as file)
+            auto_migrate: Whether to automatically migrate data to latest version
+            target_version: Target schema version (defaults to current)
         """
         self.file_path = Path(file_path)
         self.backup_dir = Path(backup_dir) if backup_dir else self.file_path.parent
         self.backup_dir.mkdir(exist_ok=True, parents=True)
+        self.auto_migrate = auto_migrate and MIGRATIONS_AVAILABLE
+        self.target_version = target_version if target_version else (
+            CURRENT_SCHEMA_VERSION if MIGRATIONS_AVAILABLE else None
+        )
         
         # Ensure parent directory exists
         self.file_path.parent.mkdir(exist_ok=True, parents=True)
@@ -70,16 +84,20 @@ class AtomicJSONRepository:
     
     def load(self, default_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Atomically load JSON data with corruption recovery.
+        Atomically load JSON data with corruption recovery and auto-migration.
         
         Args:
             default_data: Default data to return if file doesn't exist
             
         Returns:
-            Loaded JSON data or default_data
+            Loaded JSON data or default_data, migrated to current version if needed
         """
         if not self.file_path.exists():
-            return default_data or {}
+            default = default_data or {}
+            # Add schema version to new data if versioning is available
+            if self.auto_migrate and self.target_version:
+                default = self._ensure_schema_version(default)
+            return default
         
         try:
             with self._file_lock(self.file_path, 'r') as f:
@@ -88,7 +106,17 @@ class AtomicJSONRepository:
                 # Validate loaded data
                 if not isinstance(data, dict):
                     raise ValueError("JSON data must be a dictionary")
-                    
+                
+                # Handle schema migration if enabled
+                if self.auto_migrate and self.target_version:
+                    original_version = data.get("schema_version", "1.0")
+                    data = self._ensure_schema_version(data)
+                    current_version = data.get("schema_version", "1.0")
+                    if original_version != current_version:
+                        print(f"📝 Data migrated to schema version {self.target_version}")
+                        # Save migrated data back to file
+                        self.save(data, create_backup=True)
+                
                 return data
                 
         except (json.JSONDecodeError, ValueError) as e:
@@ -98,10 +126,20 @@ class AtomicJSONRepository:
             backup_data = self._recover_from_backup()
             if backup_data is not None:
                 print(f"✅ Recovered data from backup")
+                # Apply migration to recovered data if needed
+                if self.auto_migrate and self.target_version:
+                    original_version = backup_data.get("schema_version", "1.0")
+                    backup_data = self._ensure_schema_version(backup_data)
+                    current_version = backup_data.get("schema_version", "1.0")
+                    if original_version != current_version:
+                        print(f"📝 Recovered data migrated to schema version {self.target_version}")
                 return backup_data
                 
             print(f"❌ No valid backup found, using default data")
-            return default_data or {}
+            default = default_data or {}
+            if self.auto_migrate and self.target_version:
+                default = self._ensure_schema_version(default)
+            return default
     
     def save(self, data: Dict[str, Any], create_backup: bool = True) -> bool:
         """
@@ -227,16 +265,36 @@ class AtomicJSONRepository:
         if not self.file_path.exists():
             return None
         return datetime.fromtimestamp(self.file_path.stat().st_mtime)
+    
+    def _ensure_schema_version(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure data has the correct schema version, migrating if necessary.
+        
+        Args:
+            data: Data to check/migrate
+            
+        Returns:
+            Data with correct schema version
+        """
+        if not MIGRATIONS_AVAILABLE or not self.target_version:
+            # Add schema version to data if not present, but don't migrate
+            if "schema_version" not in data:
+                data = data.copy()
+                data["schema_version"] = self.target_version or "1.0"
+            return data
+        
+        migrated_data, was_migrated = ensure_schema_version(data, self.target_version)
+        return migrated_data
 
 
 # Convenience functions for common operations
 def load_json_safe(file_path: str, default_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Load JSON data safely with automatic corruption recovery."""
-    repo = AtomicJSONRepository(file_path)
+    repo = AtomicJSONRepository(file_path, auto_migrate=False)
     return repo.load(default_data)
 
 
 def save_json_safe(file_path: str, data: Dict[str, Any], create_backup: bool = True) -> bool:
     """Save JSON data safely with atomic operations."""
-    repo = AtomicJSONRepository(file_path)
+    repo = AtomicJSONRepository(file_path, auto_migrate=False)
     return repo.save(data, create_backup)

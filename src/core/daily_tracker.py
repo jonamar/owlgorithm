@@ -216,8 +216,8 @@ def main():
     with open(latest_json_path, 'r') as f:
         json_data = json.load(f)
         
-    # Load or create state data using atomic operations
-    state_repo = AtomicJSONRepository(STATE_FILE)
+    # Load or create state data using atomic operations with versioning
+    state_repo = AtomicJSONRepository(STATE_FILE, auto_migrate=True)
     state_data = state_repo.load({})
 
     # Handle daily lesson tracking (now that we have json_data)

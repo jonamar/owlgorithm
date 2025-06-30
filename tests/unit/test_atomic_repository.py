@@ -30,7 +30,8 @@ class TestAtomicJSONRepository:
     def repo(self, temp_dir):
         """Create repository instance with temporary file."""
         file_path = temp_dir / "test_data.json"
-        return AtomicJSONRepository(str(file_path))
+        # Disable auto-migration for core repository tests to maintain predictable behavior
+        return AtomicJSONRepository(str(file_path), auto_migrate=False)
     
     def test_save_and_load_basic(self, repo):
         """Test basic save and load operations."""
@@ -278,7 +279,8 @@ class TestRealWorldScenarios:
     def state_repo(self, temp_dir):
         """Create repository for tracker state file."""
         state_file = temp_dir / "tracker_state.json"
-        return AtomicJSONRepository(str(state_file))
+        # Disable auto-migration for core repository tests to maintain predictable behavior
+        return AtomicJSONRepository(str(state_file), auto_migrate=False)
     
     def test_daily_tracker_state_operations(self, state_repo):
         """Test typical daily tracker state operations."""
