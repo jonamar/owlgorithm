@@ -239,6 +239,29 @@ def parse_session_data(html_content):
             session_type = "story_practice"
         elif "· lesson" in text:
             session_type = "unit_lesson"
+            # Extract unit name from skill links for unit lessons
+            skill_links = item.find_all('a', href=re.compile(r'/skill/fr/'))
+            if skill_links:
+                href = skill_links[0]['href']
+                unit_match = re.search(r'/skill/fr/([^/]+)', href)
+                if unit_match:
+                    unit_name = unit_match.group(1).replace('-', ' ')
+                    unit = unit_name
+                    
+                    # Track unit transitions (first appearance chronologically)
+                    if unit not in unit_transitions:
+                        unit_transitions[unit] = dt
+            else:
+                # Fallback: try to extract unit name from text pattern XPUnitName
+                # Example: "102XPRequests· lesson" -> extract "Requests"
+                unit_text_match = re.search(r'\d+XP([A-Za-z]+)·', text)
+                if unit_text_match:
+                    unit_name = unit_text_match.group(1)
+                    unit = unit_name
+                    
+                    # Track unit transitions (first appearance chronologically)
+                    if unit not in unit_transitions:
+                        unit_transitions[unit] = dt
         # Note: Even "unknown" session types count as lessons (is_lesson = True)
         else:
             # Look for unit name in skill links
