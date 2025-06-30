@@ -125,8 +125,17 @@ Environment: Python 3.7+, virtual environment recommended
 - **Phase 1A**: Core module extraction (615→335 lines, -45%)
 - **Phase 1B**: Comprehensive testing infrastructure (29 tests, 99% coverage)
 - **Phase 1C**: Automation diagnostics and logging infrastructure
+- **Phase 3A**: Algorithm 1 unit counting implementation (36.8 lessons/unit average)
 - **Refactoring**: All code successfully modularized and tested
 - **Environment diagnosis**: Isolated macOS security as root cause
+
+### ALGORITHM 1 SPECIFICATIONS 📋
+**Critical Implementation Requirements:**
+- **Hard-coded start date**: Exclude all data before 2025-06-19 (Nightmare unit start)
+- **Exclude incomplete units**: On Sale (no reliable start), current active unit
+- **Date range**: Only analyze data from first complete unit to last complete unit  
+- **Target validation**: Requests = 34 lessons, Grooming+Reflexives = 39 lessons
+- **Expected average**: ~35 lessons/unit from complete units only
 
 ### PHASE 1 ACHIEVEMENTS
 - Extracted `metrics_calculator.py` and `markdown_updater.py` 

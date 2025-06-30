@@ -393,11 +393,17 @@ def calculate_recent_lessons_per_unit(sessions):
     """
     Calculate lessons per unit using Algorithm 1: "First Mention = Unit Start" with Sub-unit Folding.
     
+    CRITICAL CONSTRAINTS (see CLAUDE.md Algorithm 1 Specifications):
+    - Hard-coded start date: 2025-06-19 (Nightmare unit start - first complete unit)
+    - Exclude incomplete units: On Sale (no reliable start), current active unit
+    - Target validation: Requests = 34 lessons, Grooming+Reflexives = 39 lessons
+    
     Algorithm:
-    1. Detect unit boundaries by first mention of unit name (chronologically)
-    2. Assign ALL XP-earning sessions to the currently active unit
-    3. Fold small units (<8 lessons) into adjacent units when appropriate
-    4. Exclude current incomplete unit from average calculation
+    1. Filter to complete unit date range (2025-06-19 onwards)
+    2. Detect unit boundaries by first mention of unit name (chronologically)
+    3. Assign ALL XP-earning sessions to the currently active unit
+    4. Fold small units (<8 lessons) into adjacent units when appropriate
+    5. Exclude current incomplete unit and units without reliable starts
     
     Returns:
         dict: {
@@ -410,8 +416,15 @@ def calculate_recent_lessons_per_unit(sessions):
     if not sessions:
         return None
     
+    # HARD-CODED CONSTRAINT: Only analyze data from first complete unit (Nightmare) onwards
+    ANALYSIS_START_DATE = '2025-06-19'  # Nightmare unit start - first complete unit
+    filtered_sessions = [s for s in sessions if s['date'] >= ANALYSIS_START_DATE]
+    
+    print(f"📊 Algorithm 1 constraints: Using sessions from {ANALYSIS_START_DATE} onwards")
+    print(f"📊 Filtered {len(sessions)} → {len(filtered_sessions)} sessions for analysis")
+    
     # Sort sessions chronologically (oldest first) for proper unit detection
-    sorted_sessions = sorted(sessions, key=lambda x: x['datetime'])
+    sorted_sessions = sorted(filtered_sessions, key=lambda x: x['datetime'])
     
     # Step 1: Detect unit boundaries by first mention
     unit_boundaries = []
@@ -443,15 +456,19 @@ def calculate_recent_lessons_per_unit(sessions):
         if current_unit:
             unit_session_counts[current_unit] += 1
     
-    # Step 3: Exclude current incomplete unit (last unit in sequence)
+    # Step 3: Exclude incomplete units (current unit + units without reliable starts)
     unit_sequence = [b['unit'] for b in unit_boundaries]
+    EXCLUDED_UNITS = {'On Sale'}  # Units without reliable start points
+    
     if unit_sequence:
         current_unit_name = unit_sequence[-1]
-        print(f"📊 Excluding current incomplete unit: {current_unit_name}")
+        excluded_units = EXCLUDED_UNITS | {current_unit_name}
+        print(f"📊 Excluding incomplete units: {excluded_units}")
         completed_units = {unit: count for unit, count in unit_session_counts.items() 
-                          if unit != current_unit_name}
+                          if unit not in excluded_units}
     else:
-        completed_units = dict(unit_session_counts)
+        completed_units = {unit: count for unit, count in unit_session_counts.items() 
+                          if unit not in EXCLUDED_UNITS}
     
     # Step 4: Apply sub-unit folding for small units
     final_unit_counts = {}
