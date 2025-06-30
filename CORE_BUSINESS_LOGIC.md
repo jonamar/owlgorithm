@@ -1,184 +1,145 @@
 # CORE BUSINESS LOGIC - CRITICAL PROJECT REQUIREMENTS
 
-**⚠️ WARNING: This document defines the core business logic that MUST NOT be broken by any refactoring or new features. ⚠️**
+**⚠️ This document defines immutable business rules that MUST NOT be broken by any code changes. ⚠️**
 
 ## 🎯 PROJECT MISSION
 
-**Goal**: Complete the entire French Duolingo course (272 units) within 18 months using data-driven progress tracking.
+Complete 272 French Duolingo units in 548 days (18 months) using data-driven progress tracking.
 
-## 🔢 CORE LESSON COUNTING PRINCIPLE
+## 🔢 LESSON COUNTING PRINCIPLE
 
-### **CRITICAL RULE: ALL XP-earning sessions count as lessons**
+### **CRITICAL RULE: ALL XP sessions count as lessons**
 
 ```python
 # ALWAYS TRUE - This logic must NEVER be conditional
 is_lesson = True  # Every session that earns XP is a lesson
 ```
 
-**Why this matters:**
-- Historical testing revealed 68% of learning activity was miscounted when only "· lesson" sessions were counted
-- "Personalized practice", "story practice", "unit reviews", and "legendary" sessions are ALL legitimate learning activities
-- The system must reflect actual learning effort, not arbitrary Duolingo categorization
+**Why this is immutable:**
+- Historical testing: Only counting "· lesson" sessions missed 68% of learning activity
+- ALL session types are legitimate learning: practice, stories, unit reviews, legendary lessons
+- Session types are metadata only - they do NOT affect lesson counting
 
-### **Session Types are Metadata Only**
-- Session types (`unit_lesson`, `personalized_practice`, `story_practice`, etc.) are for reporting/analysis
-- Session types do NOT affect whether something counts as a lesson
-- Even "unknown" session types count as lessons
+## 🎯 DATA SOURCE REQUIREMENTS
 
-## 🎯 CRITICAL DATA SOURCE REQUIREMENTS
+### **ONLY Raw Modal Data is Trusted**
 
-### **ONLY Trust the Raw Modal Data**
 ```html
-<!-- TRUSTED: Raw modal data from duome.eu -->
-<div id="raw" class="hidden fancybox-content" style="display: inline-block;">
-  <!-- This contains the ONLY reliable session history -->
+<!-- TRUSTED: Only this div contains reliable data -->
+<div id="raw" class="hidden fancybox-content">
+  <!-- All session history data -->
 </div>
 ```
 
-**CRITICAL REQUIREMENTS:**
-- **ONLY** the `<div id="raw">` modal data is reliable from duome.eu
-- **ALL other** duome.eu displayed data is chronically inaccurate and must be ignored
-- The raw modal **MUST** be refreshed via "aggiorna" button click or data is stale
-- Browser automation with update button click is **REQUIRED** for fresh data
+**Critical requirements:**
+- **ONLY** `<div id="raw">` modal data is reliable from duome.eu
+- **ALL OTHER** duome.eu data is chronically inaccurate
+- **MUST** click "aggiorna" button to refresh or data is stale
+- HTTP requests without automation return outdated data
 
-### **Unit Boundary Detection**
+### **Unit Boundary Detection Rules**
+
 ```html
-<!-- Unit completion marker (unit boundary) -->
-<li>2025-06-28 11:10:29 · 120XP  · <span class="cCCC">legendary / unit review</span></li>
+<!-- UNIT BOUNDARY (end of unit) -->
+<li>...· <span class="cCCC">legendary / unit review</span></li>
 
-<!-- NOT a unit boundary (legendary within unit) -->
-<li>2025-06-27 07:24:35 · 90XP  · <span class="cCCC">legendary / story /practice</span></li>
+<!-- NOT A BOUNDARY (lesson within unit) -->  
+<li>...· <span class="cCCC">legendary / story /practice</span></li>
 ```
 
-**Unit Demarcation Rules:**
-- **ONLY "unit review"** sessions mark unit boundaries (end of unit)
-- **"legendary"** without "unit review" are regular lessons within a unit
-- Count lessons between "unit review" markers to calculate lessons per unit
-- Use recent unit boundary analysis for accurate lessons/unit averages
+**Detection rules:**
+- **ONLY** "unit review" sessions mark unit boundaries
+- "legendary" without "unit review" are regular lessons within a unit
+- Count lessons between unit review markers for accurate lessons-per-unit
 
-## 📊 DYNAMIC GOAL CALCULATION SYSTEM
+## 📊 DYNAMIC CALCULATION REQUIREMENTS
 
-### **A) Average Lessons Per Unit (Dynamic)**
+### **Lessons Per Unit Calculation**
+
 ```python
-# Calculate from actual completion data
-lessons_per_unit = total_lessons_completed / total_units_completed
-```
-- Updates automatically as more units are completed
-- Accounts for actual difficulty/practice requirements per unit
-- More accurate than static estimates
+# Use recent unit boundary analysis (most accurate)
+lessons_per_unit = analyze_unit_boundaries(recent_sessions)
 
-### **B) Total Estimated Lessons Remaining**
+# NOT static estimates or total_lessons / total_units mixing timeframes
+```
+
+**Requirements:**
+- Use unit boundary analysis from recent data (unit review markers)
+- Recent average: ~19.0 lessons/unit (realistic, not 2.1 from mixed timeframes)
+- Update projections as new unit boundaries detected
+
+### **Goal Calculation Chain**
+
 ```python
-remaining_units = 272 - completed_units  # 272 = total French course units
-estimated_remaining_lessons = remaining_units * current_lessons_per_unit_average
+remaining_units = 272 - completed_units
+lessons_remaining = remaining_units * recent_lessons_per_unit  
+daily_goal = lessons_remaining / days_remaining
 ```
 
-### **C) Required Daily Lessons**
-```python
-days_remaining = 548 - days_elapsed  # 548 = 18 months
-daily_goal = estimated_remaining_lessons / days_remaining
-```
-- Recalculates automatically based on current pace
-- Accounts for actual performance vs estimates
-
-### **D) Completion Projections**
-```python
-current_daily_average = total_lessons_completed / days_elapsed
-projected_completion_days = total_estimated_lessons / current_daily_average
-```
-
-## 🏗️ CRITICAL CONFIG PARAMETERS
-
-### **Fixed Parameters (Do Not Change)**
-```python
-TOTAL_UNITS_IN_COURSE = 272      # French course total
-GOAL_DAYS = 548                  # 18 months = 548 days
-USERNAME = "jonamar"             # Target user
-```
-
-### **Dynamic Parameters (Auto-calculated)**
-```python
-# These should be calculated from actual data, not hardcoded
-lessons_per_unit = calculate_actual_lessons_per_unit()
-daily_goal = calculate_dynamic_daily_goal()
-completion_estimate = calculate_completion_projection()
-```
+**Fixed parameters:**
+- `TOTAL_UNITS_IN_COURSE = 272`
+- `GOAL_DAYS = 548` (18 months)
+- `USERNAME = "jonamar"`
 
 ## 🚨 DEVELOPER PROTECTION RULES
 
 ### **1. Lesson Counting Protection**
+
 ```python
-# ✅ CORRECT - All sessions count
+# ✅ CORRECT
 for session in sessions:
-    if session_earns_xp:
+    if earns_xp:
         lesson_count += 1
 
-# ❌ WRONG - Conditional counting
+# ❌ WRONG - Excludes practice/stories
 for session in sessions:
-    if session['type'] == 'lesson':  # This excludes practice!
+    if session_type == 'lesson':
         lesson_count += 1
 ```
 
-### **2. Projection Calculation Protection**
-- Daily goals must be recalculated based on actual progress data
-- Never use static estimates when dynamic data is available
-- Always update projections when new lesson data is added
+### **2. Data Source Protection**
 
-### **3. Data Integrity Protection**
-- Never modify lesson counts without understanding retroactive impact
-- All changes to lesson counting logic must include historical recalculation
-- Progress tracking must maintain consistency across all components
+```python
+# ✅ CORRECT - Only raw modal
+raw_div = soup.find('div', {'id': 'raw'})
+sessions = parse_session_data(raw_div)
 
-## 📈 REQUIRED METRICS FOR TRACKING
+# ❌ WRONG - Using unreliable page data
+stats = soup.find('.stats').text  # Chronically inaccurate
+```
 
-### **Core Progress Metrics**
-1. **Total lessons completed** (all session types)
-2. **Units completed** (based on unit completion sessions)
-3. **Current lessons per unit average** (dynamic calculation)
-4. **Days elapsed since project start**
-5. **Estimated lessons remaining**
-6. **Required daily pace** (updated daily)
-7. **Projected completion date** (based on current performance)
+### **3. Unit Boundary Protection**
 
-### **Performance Analysis Metrics**
-1. **Daily lesson completion rate**
-2. **Weekly lesson completion trends**
-3. **Ahead/behind schedule status**
-4. **Course difficulty progression** (lessons per unit over time)
+```python
+# ✅ CORRECT - Only unit review markers
+if "unit review" in session_text.lower():
+    is_unit_boundary = True
 
-## 🔧 IMPLEMENTATION REQUIREMENTS
+# ❌ WRONG - All legendary sessions
+if "legendary" in session_text.lower():
+    is_unit_boundary = True  # Includes within-unit legendary
+```
 
-### **Automatic Recalculation Triggers**
-- When new lesson data is scraped
-- When units are completed
-- When lesson counting logic changes
-- Daily goal reassessment
+## 📈 REQUIRED METRICS
 
-### **Historical Data Protection**
-- Changes to lesson counting must trigger historical recalculation
-- State files must be updated to reflect corrected counts
-- Progress reports must show accurate historical data
+**Core tracking:**
+- Total lessons: ALL XP sessions counted
+- Units completed: Based on unit review boundaries  
+- Recent lessons/unit: From unit boundary analysis
+- Required daily pace: Dynamic based on remaining effort
 
-### **Error Prevention**
-- Unit tests must verify lesson counting logic
-- Integration tests must verify projection calculations
-- Any refactoring must validate against known lesson totals
+**Notification separation:**
+- Hardcoded 15 lessons/day goal in notifications (preserved)
+- Dynamic calculations for progress reports only
 
-## 🎯 SUCCESS CRITERIA
+## ⚠️ BREAKING THESE RULES CORRUPTS PROGRESS TRACKING
 
-**The system succeeds when:**
-1. All learning activity is accurately counted (no 68% undercounts)
-2. Daily goals reflect realistic requirements based on actual data
-3. Projections accurately predict course completion timeline
-4. Progress tracking motivates consistent daily learning
-5. The 18-month goal remains achievable with data-driven adjustments
-
-**The system fails when:**
-- Lesson counting excludes legitimate learning activities
-- Daily goals become unrealistic due to poor projections
-- Historical data becomes inconsistent
-- Progress tracking demotivates due to inaccurate metrics
+**Success criteria:**
+- No learning activity excluded from counts
+- Projections based on trusted data sources only  
+- Unit boundaries accurately detected
+- Historical data integrity maintained
 
 ---
 
-**🔒 This document defines immutable business requirements. Any code changes that conflict with these principles must be rejected.**
+**🔒 These rules are immutable. Any code changes that conflict with these principles must be rejected.**

@@ -67,7 +67,7 @@ class TestMarkdownUpdater:
         with patch('builtins.open', mock_open()) as mock_file:
             # Mock the metrics calculations
             with patch('src.core.markdown_updater.calculate_performance_metrics') as mock_perf:
-                with patch('src.core.markdown_updater.calculate_unit_completion_metrics') as mock_unit:
+                with patch('src.core.metrics_calculator.calculate_daily_lesson_goal') as mock_goal:
                     
                     # Set up mock return values
                     mock_perf.return_value = {
@@ -81,13 +81,7 @@ class TestMarkdownUpdater:
                         'recent_avg_xp': 600
                     }
                     
-                    mock_unit.return_value = {
-                        'completed_units_tracked': 3,
-                        'avg_lessons_per_unit': 25.0,
-                        'daily_requirement': 9.0,
-                        'remaining_units': 186,
-                        'total_lessons_needed': 4650
-                    }
+                    mock_goal.return_value = 9.0
                     
                     result = update_markdown_file(
                         newly_completed_count=0,
@@ -100,7 +94,7 @@ class TestMarkdownUpdater:
                     assert result is True
                     # Verify metrics functions were called
                     mock_perf.assert_called_once_with(sample_session_data)
-                    mock_unit.assert_called_once()
+                    mock_goal.assert_called_once()
     
     def test_update_markdown_regex_patterns(self, sample_markdown_content):
         """Test that regex patterns correctly update content"""
@@ -124,7 +118,7 @@ class TestMarkdownUpdater:
             assert "**Total Lessons Completed**: 200" in written_content
             # Note: Core/Practice breakdown insertion needs debugging
             # assert "(Core: 60, Practice: 140)" in written_content
-            assert "June 28, 2025" in written_content  # Updated timestamp
+            assert "June 30, 2025" in written_content  # Updated timestamp
     
     def test_update_markdown_without_optional_data(self, sample_markdown_content):
         """Test markdown update without optional session/state data"""

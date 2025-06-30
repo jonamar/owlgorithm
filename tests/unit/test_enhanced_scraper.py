@@ -352,7 +352,11 @@ class TestIntegration:
             assert result == sample_scrape_data
             mock_scraper.scrape_with_retry.assert_called_once_with('testuser')
     
-    def failing_primary_method(username):
+    def test_fallback_retry_logic(self, enhanced_scraper, sample_scrape_data):
+        """Test retry logic with fallback method."""
+        call_count = {'primary': 0, 'fallback': 0}
+        
+        def failing_primary_method(username):
             call_count['primary'] += 1
             # Primary always fails so fallback is triggered
             raise ScrapingError(f"Primary attempt {call_count['primary']} failed")
