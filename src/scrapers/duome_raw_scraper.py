@@ -452,8 +452,10 @@ def calculate_recent_lessons_per_unit(sessions):
         if session.get('unit'):
             current_unit = session['unit']
         
-        # Count ALL sessions as lessons for the current unit
+        # CRITICAL FIX: Assign unit to session object AND count it
         if current_unit:
+            # Update session metadata with assigned unit (for data integrity)
+            session['assigned_unit'] = current_unit
             unit_session_counts[current_unit] += 1
     
     # Step 3: Exclude incomplete units (current unit + units without reliable starts)

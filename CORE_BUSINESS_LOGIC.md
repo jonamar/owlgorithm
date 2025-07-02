@@ -72,7 +72,9 @@ lessons_per_unit = calculate_using_first_mention_algorithm(recent_sessions)
 - **Session Assignment**: ALL XP-earning sessions count as lessons for active unit
 - **Sub-unit Folding**: Units <8 lessons adjacent to same unit get merged
 - **Exclusions**: Skip current incomplete unit and units without reliable start points
-- **Target Average**: ~37 lessons/unit (validated: 36.8 from production data)
+- **Current Average**: 32.0 lessons/unit (Algorithm 1 with constraints - see CLAUDE.md)
+- **Constraints**: Hard-coded start date 2025-06-19, exclude On Sale/current units
+- **Validation**: Requests=29, Grooming+Reflexives=39, Nightmare=28 lessons
 
 ### **Goal Calculation Chain**
 

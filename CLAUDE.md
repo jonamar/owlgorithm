@@ -134,8 +134,9 @@ Environment: Python 3.7+, virtual environment recommended
 - **Hard-coded start date**: Exclude all data before 2025-06-19 (Nightmare unit start)
 - **Exclude incomplete units**: On Sale (no reliable start), current active unit
 - **Date range**: Only analyze data from first complete unit to last complete unit  
-- **Target validation**: Requests = 34 lessons, Grooming+Reflexives = 39 lessons
-- **Expected average**: ~35 lessons/unit from complete units only
+- **Current results**: Requests = 29 lessons, Grooming+Reflexives = 39 lessons, Nightmare = 28 lessons  
+- **Calculated average**: 32.0 lessons/unit (accurate from data, not target)
+- **Data storage**: Latest scrape stored in data/duome_raw_jonamar_TIMESTAMP.json for investigation
 
 ### PHASE 1 ACHIEVEMENTS
 - Extracted `metrics_calculator.py` and `markdown_updater.py` 
