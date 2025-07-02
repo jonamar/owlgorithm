@@ -934,8 +934,8 @@ def main():
     parser = argparse.ArgumentParser(description="Fetch and analyze Duolingo session data from duome.eu")
     parser.add_argument("--username", "-u", default="jonamar", help="Duolingo username to fetch data for")
     parser.add_argument("--no-automation", "-n", action="store_true", help="Skip browser automation and use direct request")
-    parser.add_argument("--headless", "-l", action="store_false", dest="visible", help="Run browser in headless mode (no UI)")
     parser.add_argument("--visible", "-v", action="store_true", dest="visible", default=False, help="Show browser UI for debugging")
+    parser.add_argument("--headless", "-l", action="store_true", dest="headless_flag", help="Force headless mode (default behavior)")
     parser.add_argument("--output", "-o", help="Output file path (default: duome_raw_<username>_<timestamp>.json)")
     parser.add_argument("--validate-headless", action="store_true", help="Test headless scraping by running twice and checking timestamp changes")
     parser.add_argument("--wait-seconds", type=int, default=30, help="Seconds to wait between validation runs (default: 30)")
@@ -962,7 +962,7 @@ def main():
             print("\n⚠️ CONCLUSION: Headless validation inconclusive - consider manual verification")
             return
         
-    # Normal operation mode
+    # Normal operation mode (default: headless unless --visible flag used)
     data = scrape_duome(args.username, use_automation=not args.no_automation, headless=not args.visible)
     
     if not data:
