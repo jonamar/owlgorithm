@@ -119,7 +119,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
                           rf"\g<1>{metrics['recent_avg_sessions']:.1f} lessons/day, {metrics['recent_avg_xp']:.0f} XP/day", content)
         
         # Update goal progress metrics using recent unit analysis
-        total_completed_units = state_data.get('total_completed_units', 86)
+        total_completed_units = state_data.get('total_completed_units', 3)
         remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
         
         # Try to get lessons per unit from recent unit analysis

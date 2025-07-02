@@ -89,7 +89,7 @@ def calculate_completion_projection(state_data):
     # Use total_completed_units if available, otherwise fall back to processed_units count  
     total_completed_units = state_data.get('total_completed_units', len(state_data.get('processed_units', [])))
     total_lessons_completed = state_data.get('total_lessons_completed', 0)
-    remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
+    remaining_units = TOTAL_COURSE_UNITS - total_completed_units
     
     # Calculate dynamic lessons per unit
     if total_completed_units > 0:
@@ -100,7 +100,7 @@ def calculate_completion_projection(state_data):
         total_lessons_remaining = remaining_units * actual_lessons_per_unit
     
     # Calculate total course lessons estimate
-    total_estimated_lessons = TOTAL_UNITS_IN_COURSE * actual_lessons_per_unit
+    total_estimated_lessons = TOTAL_COURSE_UNITS * actual_lessons_per_unit
     
     # Calculate current daily average (would need start date for accurate calculation)
     # For now, use simplified calculation

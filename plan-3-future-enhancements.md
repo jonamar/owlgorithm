@@ -7,7 +7,29 @@
 
 ## 📊 Enhanced Features
 
-### Epic 1: Calculation Logic Unification
+### Epic 1: Clean Historical Data (PRIORITY: HIGH)
+**Objective**: Remove historical data confusion and establish clean tracking-only foundation
+
+**Problem**: `total_completed_units: 86` mixes historical + tracking data, causing wrong progress calculations
+**Solution**: Update to tracking-only unit count and fix affected calculations
+
+**Audit Results**: Only 2 active files affected (manageable blast radius)
+- `src/core/metrics_calculator.py` - projection calculations  
+- `src/core/markdown_updater.py` - progress updates
+
+**Files to modify:**
+- `tracker_state.json` - Update `total_completed_units: 86 → 3` (tracking-only count)  
+- `src/core/metrics_calculator.py` - Handle new unit count in projections
+- `src/core/markdown_updater.py` - Handle new unit count in progress display
+
+**Changes:**
+```python
+# Use tracking-only unit count (no historical data)
+TRACKING_ONLY_COMPLETED_UNITS = 3  # Requests, Grooming, Protest
+remaining_units = TOTAL_COURSE_UNITS - TRACKING_ONLY_COMPLETED_UNITS  # 272 - 3 = 269
+```
+
+### Epic 2: Calculation Logic Unification  
 **Objective**: Single source of truth for all progress calculations
 
 **Problem**: Currently notifications and personal-math.md use different calculation paths
@@ -31,7 +53,7 @@ def get_tracked_unit_progress():
     }
 ```
 
-### Epic 2: 18-Month Goal Tracking & Burn Rate Analysis
+### Epic 3: 18-Month Goal Tracking & Burn Rate Analysis
 **Objective**: Track progress against 18-month goal with performance analysis
 
 **New Features:**
@@ -72,30 +94,6 @@ def get_tracked_unit_progress():
    - **Projected Completion**: Month Year (X months early/late)
    ```
 
-### Epic 3: Clean Data Model Architecture
-**Objective**: Remove historical data confusion permanently
-
-**Data Model Restructure:**
-```json
-{
-  "tracking_metadata": {
-    "start_date": "2025-06-23",
-    "tracked_complete_units": ["Requests", "Grooming", "Protest"],
-    "excluded_partial_units": ["Nightmare"],
-    "current_incomplete_unit": "Dining Out"
-  },
-  "daily_progress": {
-    "lessons_completed": 9,
-    "daily_goal": 12,  // Hardcoded from urgent fix
-    "last_daily_reset": "2025-07-02"
-  },
-  "historical_reference": {
-    "note": "89 units completed before tracking started (2025-06-23)",
-    "total_course_progress": 93  // 89 + 1 + 3 (for reference only)
-  }
-}
-```
-
 ### Epic 4: Advanced Analytics
 **Objective**: Rich progress insights and trend analysis
 
@@ -105,43 +103,48 @@ def get_tracked_unit_progress():
 3. **Goal Adjustment Recommendations**: Dynamic goal suggestions based on performance
 4. **Milestone Tracking**: Unit completion celebrations
 
-## 🔍 Implementation Priority
+## 🔍 Implementation Priority (UPDATED)
 
-### High Priority (Next Sprint)
-1. **Epic 1**: Calculation Logic Unification 
-   - Fixes consistency issues between notifications and markdown
-   - Low risk, high value
+### Highest Priority (Do First)  
+1. **Epic 1**: Clean Historical Data
+   - **Critical**: Fixes wrong progress calculations (86 vs 3 units)
+   - **Low risk**: Only 2 files affected, manageable blast radius
+   - **Foundation**: Required for all other work
 
-### Medium Priority  
-2. **Epic 2**: 18-Month Goal Tracking
-   - Adds valuable progress insights
-   - Builds on constants from urgent fix
+### High Priority  
+2. **Epic 2**: Calculation Logic Unification
+   - Fixes consistency issues between notifications and markdown  
+   - Single source of truth for calculations
+   - Builds on clean data from Epic 1
+
+### Medium Priority
+3. **Epic 3**: 18-Month Goal Tracking & Burn Rate Analysis
+   - Advanced goal tracking features
+   - Valuable progress insights
+   - Builds on unified calculations from Epic 2
 
 ### Lower Priority
-3. **Epic 3**: Data Model Restructure
-   - Architectural improvement  
-   - Can be done incrementally
-
 4. **Epic 4**: Advanced Analytics
    - Nice-to-have features
-   - Requires stable foundation first
+   - Requires stable foundation from Epics 1-3
 
 ## ✅ Success Criteria
 
-### Epic 1 Complete
+### Epic 1 Complete (Clean Historical Data)
+- [x] `total_completed_units` updated from 86 to 3 (tracking-only)
+- [x] personal-math.md shows correct "Completed Units: 3" 
+- [x] Projection calculations use correct remaining units (269)
+- [x] No historical data confusion
+
+### Epic 2 Complete (Calculation Unification)
 - [ ] Notifications and personal-math.md show identical progress data
 - [ ] Single source of truth for all calculations
 - [ ] No logic duplication
 
-### Epic 2 Complete  
+### Epic 3 Complete (Goal Tracking)
 - [ ] 18-month goal progress displayed in personal-math.md
 - [ ] Burn rate analysis shows if on track for goal
 - [ ] Historical vs required pace comparison
-
-### Epic 3 Complete
-- [ ] Clear separation of tracked vs historical data
-- [ ] No more confusion about unit counts
-- [ ] Clean, maintainable data model
 
 ### Epic 4 Complete
 - [ ] Rich progress analytics and insights
@@ -155,17 +158,17 @@ def get_tracked_unit_progress():
 - Verify urgent fix is stable and not breaking automation
 
 **THEN PROCEED WITH:**
-- Epic 1 (high value, low risk)
-- Epic 2 (goal tracking)  
+- Epic 1 (critical foundation, low risk)
+- Epic 2 (calculation unification)  
 - Epic 3 & 4 as time permits
 
-## 📋 Estimated Effort
+## 📋 Estimated Effort (UPDATED)
 
-- **Epic 1**: 2-3 days (calculation unification)
-- **Epic 2**: 3-4 days (goal tracking + burn rate)  
-- **Epic 3**: 2-3 days (data model cleanup)
+- **Epic 1**: 30 minutes (clean historical data - small blast radius)
+- **Epic 2**: 2-3 days (calculation unification)
+- **Epic 3**: 3-4 days (goal tracking + burn rate)  
 - **Epic 4**: 4-5 days (advanced analytics)
 
-**Total**: 11-15 days of development work
+**Total**: 9-12 days of development work
 
 This represents significant enhancements but should only be undertaken after the urgent notification fix is proven stable.
