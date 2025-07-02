@@ -9,6 +9,15 @@ from collections import defaultdict
 from datetime import datetime
 from config import app_config as cfg
 
+# URGENT FIX: Hardcoded daily goal to fix notification bug
+DAILY_GOAL_LESSONS = 12  # Hardcoded daily target (no dynamic calculation)
+
+# Constants for future enhancements (tracking-only data model)
+TRACKING_START_DATE = "2025-06-23"  # Official tracking began (Grooming unit start) 
+TRACKED_COMPLETE_UNITS = ["Requests", "Grooming", "Protest"]  # 3 units since start
+EXCLUDED_PARTIAL_UNITS = ["Nightmare"]  # Pre-tracking, partial data
+TOTAL_COURSE_UNITS = 272  # Total units in French course
+
 # Import configuration constants
 TOTAL_UNITS_IN_COURSE = cfg.TOTAL_UNITS_IN_COURSE
 GOAL_DAYS = cfg.GOAL_DAYS  # 18 months
@@ -27,47 +36,20 @@ def count_todays_lessons(json_data, target_date):
 
 def calculate_daily_lesson_goal(state_data, recent_scrape_data=None):
     """
-    Calculate how many lessons should be completed per day based on actual performance.
+    Return hardcoded daily goal - no dynamic calculation.
     
-    Uses recent unit boundary analysis from "unit review" markers to get accurate
-    lessons-per-unit estimates based on actual course difficulty patterns.
+    URGENT FIX: This function previously had complex calculation logic that mixed
+    historical and tracking data, causing notifications to show "1 lesson/day".
+    Now returns hardcoded 12 lessons/day to fix the notification bug immediately.
+    
+    Args:
+        state_data (dict): Current state (unused, for compatibility)
+        recent_scrape_data (dict): Recent scrape data (unused, for compatibility)
+        
+    Returns:
+        int: Hardcoded daily lesson goal (12)
     """
-    # Get completed units count
-    total_completed_units = state_data.get('total_completed_units', len(state_data.get('processed_units', [])))
-    remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
-    
-    # Try to use recent unit boundary analysis first (most accurate)
-    actual_lessons_per_unit = None
-    if recent_scrape_data and 'recent_unit_analysis' in recent_scrape_data:
-        unit_analysis = recent_scrape_data['recent_unit_analysis']
-        if unit_analysis:
-            actual_lessons_per_unit = unit_analysis['average_lessons_per_unit']
-            print(f"📊 Recent unit boundary analysis: {actual_lessons_per_unit:.1f} lessons/unit")
-            print(f"   Based on {unit_analysis['completed_units_analyzed']} recently completed units with unit review boundaries")
-            for unit in unit_analysis['unit_analysis']:
-                print(f"   - {unit['unit_name']}: {unit['lessons_count']} lessons ({unit['start_date']} to {unit['end_date']})")
-    
-    # Fallback to simple calculation if unit boundary data not available
-    if actual_lessons_per_unit is None:
-        total_lessons_completed = state_data.get('total_lessons_completed', 0)
-        if total_completed_units > 0:
-            actual_lessons_per_unit = total_lessons_completed / total_completed_units
-            print(f"📊 Fallback calculation: {actual_lessons_per_unit:.1f} lessons/unit (total lessons / total units)")
-            print(f"   Warning: This may be inaccurate - mixing historical and recent data")
-        else:
-            actual_lessons_per_unit = BASE_LESSONS_PER_UNIT
-            print(f"📊 Using base estimate: {actual_lessons_per_unit} lessons/unit (no completed units yet)")
-    
-    # Calculate remaining lessons using dynamic rate
-    total_lessons_remaining = remaining_units * actual_lessons_per_unit
-    
-    # Calculate required daily pace based on time remaining
-    lessons_per_day = total_lessons_remaining / GOAL_DAYS
-    
-    print(f"📈 Goal calculation: {remaining_units} units × {actual_lessons_per_unit:.1f} lessons/unit = {total_lessons_remaining:.0f} lessons remaining")
-    print(f"📅 Required pace: {total_lessons_remaining:.0f} lessons ÷ {GOAL_DAYS} days = {lessons_per_day:.1f} lessons/day")
-    
-    return max(1, round(lessons_per_day))  # At least 1 lesson per day
+    return DAILY_GOAL_LESSONS
 
 
 def calculate_daily_progress(state_data):

@@ -76,18 +76,23 @@ lessons_per_unit = calculate_using_first_mention_algorithm(recent_sessions)
 - **Constraints**: Hard-coded start date 2025-06-19, exclude On Sale/current units
 - **Validation**: Requests=29, Grooming+Reflexives=39, Nightmare=28 lessons
 
-### **Goal Calculation Chain**
+### **Goal Calculation Requirements**
 
 ```python
+# DAILY GOAL: Hardcoded constant (no dynamic calculation)
+DAILY_GOAL_LESSONS = 12  # Fixed daily target to avoid calculation bugs
+
+# PROGRESS CALCULATION: Only for tracking purposes
 remaining_units = 272 - completed_units
 lessons_remaining = remaining_units * recent_lessons_per_unit  
-daily_goal = lessons_remaining / days_remaining
+projected_daily_pace = lessons_remaining / days_remaining  # For analysis only
 ```
 
 **Fixed parameters:**
 - `TOTAL_UNITS_IN_COURSE = 272`
 - `GOAL_DAYS = 548` (18 months)
 - `USERNAME = "jonamar"`
+- `DAILY_GOAL_LESSONS = 12` (hardcoded, not calculated)
 
 ## 🚨 DEVELOPER PROTECTION RULES
 

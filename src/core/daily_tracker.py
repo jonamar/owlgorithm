@@ -71,9 +71,9 @@ def reset_daily_lessons_if_needed(state_data, json_data=None):
         if json_data:
             todays_lessons = count_todays_lessons(json_data, current_date)
         
-        # Reset daily counters
+        # Reset daily counters  
         state_data['daily_lessons_completed'] = todays_lessons
-        state_data['daily_goal_lessons'] = calculate_daily_lesson_goal(state_data)
+        state_data['daily_goal_lessons'] = calculate_daily_lesson_goal(state_data)  # Now returns hardcoded 12
         state_data['last_daily_reset'] = current_date
         print(f"🌅 New day detected! Reset daily counters for {current_date}")
         print(f"   Today's lessons found: {todays_lessons}")

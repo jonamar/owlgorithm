@@ -129,6 +129,8 @@ Environment: Python 3.7+, virtual environment recommended
 - **Phase 1B**: Comprehensive testing infrastructure (29 tests, 99% coverage)
 - **Phase 1C**: Automation diagnostics and logging infrastructure
 - **Phase 3A**: Algorithm 1 unit counting implementation (36.8 lessons/unit average)
+- **Headless Scraping**: Eliminated browser popup interruptions during automation
+- **Daily Goal Fix**: Hardcoded 12 lessons/day target to fix notification bug
 - **Refactoring**: All code successfully modularized and tested
 - **Environment diagnosis**: Isolated macOS security as root cause
 
@@ -152,8 +154,9 @@ Environment: Python 3.7+, virtual environment recommended
 ## Important Notes
 
 - Requires active duome.eu profile (username must exist publicly)
-- Uses Selenium for auto-refresh functionality
+- Uses Selenium for auto-refresh functionality (now runs headless by default)
 - No Duolingo credentials needed (scrapes public duome.eu data)
 - Includes respectful delays and error handling for web scraping
 - State management prevents duplicate notifications
-- **AUTOMATION CURRENTLY BROKEN**: Use manual execution until migration complete
+- **Daily goal**: Hardcoded to 12 lessons/day (no dynamic calculation to avoid bugs)
+- **Automation status**: ✅ Working with headless scraping
