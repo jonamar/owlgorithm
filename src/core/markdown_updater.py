@@ -8,7 +8,7 @@ Extracted from daily_tracker.py for better organization and testability.
 import re
 from datetime import datetime
 from config import app_config as cfg
-from .metrics_calculator import calculate_performance_metrics
+from .metrics_calculator import calculate_performance_metrics, get_tracked_unit_progress
 
 # Import configuration constants
 MARKDOWN_FILE = cfg.MARKDOWN_FILE
@@ -118,47 +118,28 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
             content = re.sub(r"(\*\*Recent Performance\*\*.*?:\s*)[\d.]+\s*lessons/day,\s*[\d,]+\s*XP/day", 
                           rf"\g<1>{metrics['recent_avg_sessions']:.1f} lessons/day, {metrics['recent_avg_xp']:.0f} XP/day", content)
         
-        # Update goal progress metrics using recent unit analysis
-        total_completed_units = state_data.get('total_completed_units', 3)
-        remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
+        # Update goal progress metrics using centralized calculation
+        progress = get_tracked_unit_progress(state_data, json_data)
         
-        # Try to get lessons per unit from recent unit analysis
-        recent_unit_analysis = json_data.get('recent_unit_analysis')
-        if recent_unit_analysis and metrics:
-            avg_lessons_per_unit = recent_unit_analysis['average_lessons_per_unit']
-            completed_units_analyzed = recent_unit_analysis['completed_units_analyzed']
-            
-            # Calculate projections
-            total_lessons_needed = remaining_units * avg_lessons_per_unit
-            current_avg = metrics['daily_avg_sessions']
-            daily_req = total_lessons_needed / 548  # 18 months
-            pace_diff = current_avg - daily_req
-            
-            # Determine pace status
-            if pace_diff >= 0:
-                pace_status = f"✅ AHEAD by {pace_diff:.1f} lessons/day"
-            else:
-                pace_status = f"⚠️ BEHIND by {abs(pace_diff):.1f} lessons/day"
-            
-            # Calculate projected completion
-            projected_days = total_lessons_needed / current_avg if current_avg > 0 else 0
-            projected_months = projected_days / 30.44  # avg days per month
-            
-            # Update daily requirement
-            content = re.sub(r"(\*\*Daily Requirement\*\*:\s*)[\d.]+\s*lessons/day.*", 
-                          rf"\g<1>{daily_req:.1f} lessons/day (based on {completed_units_analyzed} recent completed units, {avg_lessons_per_unit:.1f} avg lessons/unit)", content)
-            
-            # Update pace status
-            content = re.sub(r"(\*\*Pace Status\*\*:\s*).*lessons/day", 
-                          rf"\g<1>{pace_status}", content)
-            
-            # Update projected completion
-            content = re.sub(r"(\*\*Projected Completion\*\*:\s*)[\d.]+\s*months.*", 
-                          rf"\g<1>{projected_months:.1f} months ({abs(projected_months - 18):.1f} months {'early' if projected_months < 18 else 'late'})", content)
-            
-            # Update total lessons needed
-            content = re.sub(r"(\*\*Total Lessons Needed\*\*:\s*)[\d,]+\s*lessons.*", 
-                          rf"\g<1>{total_lessons_needed:,.0f} lessons ({remaining_units} remaining units)", content)
+        # Update daily requirement using centralized calculation
+        content = re.sub(r"(\*\*Daily Requirement\*\*:\s*)[\d.]+\s*lessons/day.*", 
+                      rf"\g<1>{progress['required_lessons_per_day']:.1f} lessons/day (based on {progress['completed_units']} tracked units, {progress['lessons_per_unit']:.1f} avg lessons/unit)", content)
+        
+        # Update pace status using centralized calculation
+        content = re.sub(r"(\*\*Pace Status\*\*:\s*).*lessons/day", 
+                      rf"\g<1>{progress['pace_status']}", content)
+        
+        # Calculate projected completion using centralized data
+        projected_days = progress['total_lessons_remaining'] / progress['current_daily_avg'] if progress['current_daily_avg'] > 0 else 0
+        projected_months = projected_days / 30.44  # avg days per month
+        
+        # Update projected completion
+        content = re.sub(r"(\*\*Projected Completion\*\*:\s*)[\d.]+\s*months.*", 
+                      rf"\g<1>{projected_months:.1f} months ({abs(projected_months - 18):.1f} months {'early' if projected_months < 18 else 'late'})", content)
+        
+        # Update total lessons needed using centralized calculation
+        content = re.sub(r"(\*\*Total Lessons Needed\*\*:\s*)[\d,]+\s*lessons.*", 
+                      rf"\g<1>{progress['total_lessons_remaining']:,.0f} lessons ({progress['remaining_units']} remaining units)", content)
     
     content = re.sub(r"(\*Last updated:\s*)[\w\s,]+", rf"\g<1>{datetime.now().strftime('%B %d, %Y')}", content)
 

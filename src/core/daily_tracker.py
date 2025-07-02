@@ -91,11 +91,12 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
     daily_progress = calculate_daily_progress(state_data)
     total_lessons = state_data.get('computed_total_sessions', 0)
     
-    # Always send the same simple notification
+    # Always send the same simple notification with centralized calculation data
     notifier.send_simple_notification(
         daily_progress=daily_progress,
         units_completed=units_completed,
-        total_lessons=total_lessons
+        total_lessons=total_lessons,
+        state_data=state_data
     )
     
     print(f"📱 Sent {time_slot} notification")

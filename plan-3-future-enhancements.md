@@ -137,9 +137,9 @@ def get_tracked_unit_progress():
 - [x] No historical data confusion
 
 ### Epic 2 Complete (Calculation Unification)
-- [ ] Notifications and personal-math.md show identical progress data
-- [ ] Single source of truth for all calculations
-- [ ] No logic duplication
+- [x] Notifications and personal-math.md show identical progress data
+- [x] Single source of truth for all calculations
+- [x] No logic duplication
 
 ### Epic 3 Complete (Goal Tracking)
 - [ ] 18-month goal progress displayed in personal-math.md

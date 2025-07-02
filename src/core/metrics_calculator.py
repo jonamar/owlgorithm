@@ -193,3 +193,57 @@ def calculate_performance_metrics(json_data):
         'recent_avg_xp': recent_avg_xp,
         'recent_days': recent_days
     }
+
+
+def get_tracked_unit_progress(state_data, json_data=None):
+    """
+    Single source of truth for tracked unit progress calculations.
+    
+    Returns progress based on 3 tracked complete units only, used by both
+    notifications and markdown updates for consistency.
+    
+    Args:
+        state_data (dict): Current tracker state data
+        json_data (dict): Optional session data for unit analysis
+        
+    Returns:
+        dict: Standardized progress data for all components
+    """
+    # Core tracking data (clean, no historical confusion)
+    completed_units = len(TRACKED_COMPLETE_UNITS)
+    total_lessons = state_data.get('total_lessons_completed', 0)
+    remaining_units = TOTAL_COURSE_UNITS - 93  # Total actually completed (historical + tracked)
+    
+    # Calculate lessons per unit from tracked data
+    if completed_units > 0:
+        lessons_per_unit = total_lessons / completed_units
+    else:
+        lessons_per_unit = BASE_LESSONS_PER_UNIT
+    
+    # 18-month goal calculations
+    total_lessons_remaining = remaining_units * lessons_per_unit
+    days_remaining = 548  # ~18 months from start
+    required_lessons_per_day = total_lessons_remaining / days_remaining
+    
+    # Current performance
+    current_daily_avg = total_lessons / max(1, 15)  # Approximate active days
+    pace_difference = current_daily_avg - required_lessons_per_day
+    
+    # Status determination
+    if pace_difference >= 0:
+        pace_status = f"✅ AHEAD by {pace_difference:.1f} lessons/day"
+    else:
+        pace_status = f"⚠️ BEHIND by {abs(pace_difference):.1f} lessons/day"
+    
+    return {
+        'completed_units': completed_units,
+        'total_lessons': total_lessons,
+        'lessons_per_unit': lessons_per_unit,
+        'remaining_units': remaining_units,
+        'total_lessons_remaining': total_lessons_remaining,
+        'required_lessons_per_day': required_lessons_per_day,
+        'current_daily_avg': current_daily_avg,
+        'pace_difference': pace_difference,
+        'pace_status': pace_status,
+        'daily_goal': DAILY_GOAL_LESSONS
+    }

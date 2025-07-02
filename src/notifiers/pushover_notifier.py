@@ -9,6 +9,7 @@ import json
 import requests
 from config import app_config as cfg
 from datetime import datetime
+from src.core.metrics_calculator import get_tracked_unit_progress
 
 class PushoverNotifier:
     """Handles Pushover API notifications."""
@@ -103,15 +104,23 @@ class PushoverNotifier:
             print(f"❌ Invalid response from Pushover API: {e}")
             return False
 
-    def send_simple_notification(self, daily_progress, units_completed=0, total_lessons=0):
-        """Send simplified notification - same template for all times."""
+    def send_simple_notification(self, daily_progress, units_completed=0, total_lessons=0, state_data=None):
+        """Send simplified notification using centralized calculation data."""
         completed = daily_progress['completed']
         goal = daily_progress['goal']
         pct = int(daily_progress['progress_pct'])
         
         title = "📊 Duolingo Update"
         message = f"Today: {completed}/{goal} lessons ({pct}%)\n"
-        message += f"Total Sessions: {total_lessons:,}\n"
+        
+        # Use centralized progress calculation if state data available
+        if state_data:
+            progress = get_tracked_unit_progress(state_data)
+            message += f"Total Sessions: {progress['total_lessons']:,}\n"
+            message += f"Progress: {progress['completed_units']} units ({progress['lessons_per_unit']:.1f} lessons/unit)\n"
+            message += f"Pace: {progress['pace_status']}\n"
+        else:
+            message += f"Total Sessions: {total_lessons:,}\n"
         
         if units_completed > 0:
             message += f"Units completed: {units_completed} 🎉\n"
