@@ -32,8 +32,11 @@ python scripts/daily_update.py --username USERNAME
 # Run scraper only
 python src/scrapers/duome_raw_scraper.py --username USERNAME
 
-# Force refresh duome.eu stats
+# Force refresh duome.eu stats  
 python src/scrapers/duome_raw_scraper.py --username USERNAME --update-only
+
+# Validate headless scraping functionality
+python src/scrapers/duome_raw_scraper.py --validate-headless --username USERNAME
 ```
 
 ### Deployment

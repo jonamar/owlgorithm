@@ -21,6 +21,227 @@ from selenium.webdriver.support import expected_conditions as EC
 # Removed Chrome imports - using Firefox only
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
+def validate_headless_update_with_timestamps(username, wait_seconds=30):
+    """
+    Validate that headless button clicks work by checking timestamp changes.
+    
+    Approach: Run headless scraping twice, 30 seconds apart, and verify that
+    the timestamp in .duo-the-owl-offset .cCCC updates between runs.
+    
+    Returns:
+        dict: {
+            'success': bool,
+            'first_timestamp': str,
+            'second_timestamp': str,
+            'timestamp_changed': bool,
+            'message': str
+        }
+    """
+    print(f"🕐 Starting headless validation: running twice {wait_seconds}s apart...")
+    
+    # First run
+    print("📱 First headless run...")
+    first_result = scrape_duome_headless_with_timestamp(username)
+    if not first_result['success']:
+        return {
+            'success': False,
+            'first_timestamp': None,
+            'second_timestamp': None,
+            'timestamp_changed': False,
+            'message': f"First run failed: {first_result['message']}"
+        }
+    
+    first_timestamp = first_result['timestamp']
+    print(f"✅ First run timestamp: {first_timestamp}")
+    
+    # Wait between runs
+    print(f"⏳ Waiting {wait_seconds} seconds before second run...")
+    time.sleep(wait_seconds)
+    
+    # Second run  
+    print("📱 Second headless run...")
+    second_result = scrape_duome_headless_with_timestamp(username)
+    if not second_result['success']:
+        return {
+            'success': False,
+            'first_timestamp': first_timestamp,
+            'second_timestamp': None,
+            'timestamp_changed': False,
+            'message': f"Second run failed: {second_result['message']}"
+        }
+    
+    second_timestamp = second_result['timestamp']
+    print(f"✅ Second run timestamp: {second_timestamp}")
+    
+    # Check if timestamp changed
+    timestamp_changed = first_timestamp != second_timestamp
+    
+    if timestamp_changed:
+        message = "🎉 Headless validation SUCCESS: Timestamps changed, button clicks working!"
+    else:
+        message = "⚠️ Headless validation UNCLEAR: Timestamps identical, may indicate stale data"
+    
+    print(message)
+    
+    return {
+        'success': True,
+        'first_timestamp': first_timestamp,
+        'second_timestamp': second_timestamp,
+        'timestamp_changed': timestamp_changed,
+        'message': message
+    }
+
+
+def scrape_duome_headless_with_timestamp(username):
+    """
+    Headless scrape focused on timestamp extraction for validation.
+    
+    Returns:
+        dict: {
+            'success': bool,
+            'timestamp': str or None,
+            'message': str
+        }
+    """
+    driver = None
+    try:
+        print(f"🔄 Starting headless timestamp scrape for {username}...")
+        
+        # Setup headless Firefox
+        driver = setup_firefox_driver(headless=True)
+        url = f"https://duome.eu/{username}"
+        driver.get(url)
+        
+        # Wait for page load
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        
+        # Extract timestamp BEFORE update attempt
+        timestamp_before = extract_duome_timestamp(driver)
+        print(f"📅 Timestamp before update: {timestamp_before}")
+        
+        # Try to click update button
+        update_success = click_duome_update_button(driver, username)
+        if not update_success:
+            print("⚠️ Update button click failed, but continuing...")
+        
+        # Wait for update to process
+        time.sleep(12)
+        
+        # Extract timestamp AFTER update attempt
+        timestamp_after = extract_duome_timestamp(driver)
+        print(f"📅 Timestamp after update: {timestamp_after}")
+        
+        # For validation purposes, return the BEFORE timestamp
+        # This represents the state of the data when we arrived, before our update
+        validation_timestamp = timestamp_before
+        
+        return {
+            'success': True,
+            'timestamp': validation_timestamp,
+            'message': f"Headless scrape completed, pre-update timestamp: {validation_timestamp}"
+        }
+        
+    except Exception as e:
+        error_msg = f"Headless scrape failed: {e}"
+        print(f"❌ {error_msg}")
+        return {
+            'success': False,
+            'timestamp': None,
+            'message': error_msg
+        }
+    finally:
+        if driver:
+            driver.quit()
+
+
+def extract_duome_timestamp(driver):
+    """
+    Extract timestamp from duome.eu using the specific CSS selector.
+    
+    Looks for timestamp in .duo-the-owl-offset .cCCC as suggested.
+    Falls back to other timestamp selectors if needed.
+    
+    Returns:
+        str or None: Timestamp text if found
+    """
+    selectors = [
+        # Primary: Your suggested selector
+        ".duo-the-owl-offset .cCCC",
+        
+        # Fallbacks: Other potential timestamp locations
+        ".cCCC",
+        "[class*='cCCC']",
+        
+        # Legacy: Current XPath approach as fallback
+        "//text()[contains(., 'Last update:')]/following-sibling::*[1]"
+    ]
+    
+    for selector in selectors:
+        try:
+            if selector.startswith("//"):
+                # XPath selector
+                element = driver.find_element(By.XPATH, selector)
+            else:
+                # CSS selector
+                element = driver.find_element(By.CSS_SELECTOR, selector)
+                
+            if element and element.text.strip():
+                timestamp_text = element.text.strip()
+                print(f"📍 Found timestamp using selector '{selector}': {timestamp_text}")
+                return timestamp_text
+                
+        except (NoSuchElementException, AttributeError) as e:
+            print(f"🔍 Selector '{selector}' not found: {e}")
+            continue
+    
+    print("⚠️ No timestamp found with any selector")
+    return None
+
+
+def click_duome_update_button(driver, username):
+    """
+    Click the duome.eu update button with multiple fallback strategies.
+    
+    Returns:
+        bool: True if button was clicked successfully
+    """
+    selectors = [
+        # Target the exact element as specified
+        (By.CSS_SELECTOR, f"span.fade.aggiorna.inline[data-id='{username}']"),
+        (By.CSS_SELECTOR, "span.fade.aggiorna.inline"),
+        (By.CSS_SELECTOR, ".aggiorna"),
+        (By.XPATH, f"//span[@data-id='{username}']"),
+        (By.XPATH, "//span[contains(@class, 'aggiorna')]"),
+    ]
+    
+    for selector_type, selector in selectors:
+        try:
+            elements = driver.find_elements(selector_type, selector)
+            if elements:
+                update_button = elements[0]
+                print(f"🎯 Found update button using selector: {selector}")
+                try:
+                    print("🖱️ Clicking update button...")
+                    update_button.click()
+                    print("✅ Update button clicked successfully")
+                    return True
+                except Exception as e:
+                    print(f"❌ Standard click failed: {e}, trying JavaScript click")
+                    try:
+                        driver.execute_script("arguments[0].click();", update_button)
+                        print("✅ JavaScript click succeeded")
+                        return True
+                    except Exception as e2:
+                        print(f"❌ JavaScript click failed: {e2}")
+        except Exception as e:
+            print(f"❌ Error with selector {selector}: {e}")
+            continue
+    
+    print("❌ Update button not found or not clickable")
+    return False
+
 def fetch_duome_data_with_update(username, headless=True):
     """Fetch raw data from duome.eu with automatic stats update using Firefox"""
     url = f"https://duome.eu/{username}"
@@ -716,8 +937,30 @@ def main():
     parser.add_argument("--headless", "-l", action="store_false", dest="visible", help="Run browser in headless mode (no UI)")
     parser.add_argument("--visible", "-v", action="store_true", dest="visible", default=False, help="Show browser UI for debugging")
     parser.add_argument("--output", "-o", help="Output file path (default: duome_raw_<username>_<timestamp>.json)")
+    parser.add_argument("--validate-headless", action="store_true", help="Test headless scraping by running twice and checking timestamp changes")
+    parser.add_argument("--wait-seconds", type=int, default=30, help="Seconds to wait between validation runs (default: 30)")
     
     args = parser.parse_args()
+    
+    # Special mode: Headless validation test
+    if args.validate_headless:
+        print("🔍 HEADLESS VALIDATION MODE")
+        print("=" * 50)
+        result = validate_headless_update_with_timestamps(args.username, args.wait_seconds)
+        
+        print("\n📋 VALIDATION RESULTS:")
+        print(f"   Success: {result['success']}")
+        print(f"   First timestamp: {result['first_timestamp']}")
+        print(f"   Second timestamp: {result['second_timestamp']}")
+        print(f"   Timestamp changed: {result['timestamp_changed']}")
+        print(f"   Message: {result['message']}")
+        
+        if result['timestamp_changed']:
+            print("\n🎉 CONCLUSION: Headless scraping appears to be working correctly!")
+            return  # Exit successfully
+        else:
+            print("\n⚠️ CONCLUSION: Headless validation inconclusive - consider manual verification")
+            return
         
     # Normal operation mode
     data = scrape_duome(args.username, use_automation=not args.no_automation, headless=not args.visible)
