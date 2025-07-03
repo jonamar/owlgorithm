@@ -17,6 +17,8 @@ TRACKING_START_DATE = "2025-06-23"  # Official tracking began (Grooming unit sta
 TRACKED_COMPLETE_UNITS = ["Requests", "Grooming", "Protest"]  # 3 units since start
 EXCLUDED_PARTIAL_UNITS = ["Nightmare"]  # Pre-tracking, partial data
 TOTAL_COURSE_UNITS = 272  # Total units in French course
+UNITS_COMPLETED_BEFORE_TRACKING = 89  # Units completed before tracking started
+TRACKABLE_TOTAL_UNITS = TOTAL_COURSE_UNITS - UNITS_COMPLETED_BEFORE_TRACKING  # 183 trackable units
 
 # Import configuration constants
 TOTAL_UNITS_IN_COURSE = cfg.TOTAL_UNITS_IN_COURSE
@@ -209,31 +211,65 @@ def get_tracked_unit_progress(state_data, json_data=None):
     Returns:
         dict: Standardized progress data for all components
     """
+    from datetime import datetime, timedelta
+    
     # Core tracking data (clean, no historical confusion)
     completed_units = len(TRACKED_COMPLETE_UNITS)
     total_lessons = state_data.get('total_lessons_completed', 0)
     remaining_units = TOTAL_COURSE_UNITS - 93  # Total actually completed (historical + tracked)
     
-    # Calculate lessons per unit from tracked data
-    if completed_units > 0:
-        lessons_per_unit = total_lessons / completed_units
-    else:
-        lessons_per_unit = BASE_LESSONS_PER_UNIT
+    # Calculate lessons per unit - use course average for consistency
+    # Note: Tracked average (total_lessons/completed_units) may be skewed by 
+    # excessive practice in early units, so we use the established course average
+    tracked_lessons_per_unit = total_lessons / completed_units if completed_units > 0 else BASE_LESSONS_PER_UNIT
+    lessons_per_unit = BASE_LESSONS_PER_UNIT  # Use course average (31) for projections
     
-    # 18-month goal calculations
+    # 18-month goal timeline tracking
+    goal_start_date = datetime.strptime(TRACKING_START_DATE, "%Y-%m-%d")
+    goal_end_date = goal_start_date + timedelta(days=548)  # 18 months = 548 days
+    today = datetime.now()
+    days_elapsed = (today - goal_start_date).days
+    days_remaining = (goal_end_date - today).days
+    completion_percentage = (days_elapsed / 548) * 100 if days_elapsed > 0 else 0
+    
+    # Burn rate analysis
     total_lessons_remaining = remaining_units * lessons_per_unit
-    days_remaining = 548  # ~18 months from start
-    required_lessons_per_day = total_lessons_remaining / days_remaining
     
-    # Current performance
-    current_daily_avg = total_lessons / max(1, 15)  # Approximate active days
-    pace_difference = current_daily_avg - required_lessons_per_day
-    
-    # Status determination
-    if pace_difference >= 0:
-        pace_status = f"✅ AHEAD by {pace_difference:.1f} lessons/day"
+    # Historical pace (actual performance since tracking started)
+    if days_elapsed > 0:
+        actual_units_per_day = completed_units / days_elapsed
+        actual_lessons_per_day = total_lessons / days_elapsed
     else:
-        pace_status = f"⚠️ BEHIND by {abs(pace_difference):.1f} lessons/day"
+        actual_units_per_day = 0
+        actual_lessons_per_day = 0
+    
+    # Required pace (to meet 18-month goal)
+    if days_remaining > 0:
+        required_units_per_day = remaining_units / days_remaining
+        required_lessons_per_day = total_lessons_remaining / days_remaining
+    else:
+        required_units_per_day = 0
+        required_lessons_per_day = 0
+    
+    # Pace comparison
+    pace_difference = actual_lessons_per_day - required_lessons_per_day
+    if pace_difference >= 0:
+        pace_status = "ON TRACK" if abs(pace_difference) < 0.5 else "AHEAD"
+        pace_status_display = f"✅ {pace_status}" + (f" by {pace_difference:.1f} lessons/day" if pace_difference >= 0.5 else "")
+    else:
+        pace_status = "BEHIND"
+        pace_status_display = f"⚠️ BEHIND by {abs(pace_difference):.1f} lessons/day"
+    
+    # Projected completion
+    if actual_lessons_per_day > 0:
+        projected_days_total = total_lessons_remaining / actual_lessons_per_day
+        projected_completion_date = today + timedelta(days=projected_days_total)
+        projected_months = projected_days_total / 30.44  # avg days per month
+        months_difference = projected_months - 18
+    else:
+        projected_completion_date = None
+        projected_months = float('inf')
+        months_difference = float('inf')
     
     return {
         'completed_units': completed_units,
@@ -242,8 +278,21 @@ def get_tracked_unit_progress(state_data, json_data=None):
         'remaining_units': remaining_units,
         'total_lessons_remaining': total_lessons_remaining,
         'required_lessons_per_day': required_lessons_per_day,
-        'current_daily_avg': current_daily_avg,
+        'current_daily_avg': actual_lessons_per_day,
         'pace_difference': pace_difference,
-        'pace_status': pace_status,
-        'daily_goal': DAILY_GOAL_LESSONS
+        'pace_status': pace_status_display,
+        'daily_goal': DAILY_GOAL_LESSONS,
+        
+        # 18-month goal tracking
+        'goal_start_date': goal_start_date.strftime('%Y-%m-%d'),
+        'goal_end_date': goal_end_date.strftime('%Y-%m-%d'),
+        'days_elapsed': days_elapsed,
+        'days_remaining': days_remaining,
+        'completion_percentage': completion_percentage,
+        'actual_units_per_day': actual_units_per_day,
+        'actual_lessons_per_day': actual_lessons_per_day,
+        'required_units_per_day': required_units_per_day,
+        'projected_completion_date': projected_completion_date.strftime('%Y-%m-%d') if projected_completion_date else None,
+        'projected_months': projected_months if projected_months != float('inf') else None,
+        'months_difference': months_difference if months_difference != float('inf') else None
     }

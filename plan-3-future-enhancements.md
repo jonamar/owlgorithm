@@ -142,9 +142,9 @@ def get_tracked_unit_progress():
 - [x] No logic duplication
 
 ### Epic 3 Complete (Goal Tracking)
-- [ ] 18-month goal progress displayed in personal-math.md
-- [ ] Burn rate analysis shows if on track for goal
-- [ ] Historical vs required pace comparison
+- [x] 18-month goal progress displayed in personal-math.md
+- [x] Burn rate analysis shows if on track for goal
+- [x] Historical vs required pace comparison
 
 ### Epic 4 Complete
 - [ ] Rich progress analytics and insights
