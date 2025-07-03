@@ -11,10 +11,10 @@ import re
 import subprocess
 import sys
 
-# Adjust Python path to import sibling and project-level packages
+# Setup project paths - must be done before other imports
 current_dir = os.path.dirname(__file__)
-sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))      # /src
-sys.path.append(os.path.abspath(os.path.join(current_dir, '..', '..')))  # project root
+sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..')))      # /src
+sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..', '..')))  # project root
 import glob
 from datetime import datetime
 from notifiers.pushover_notifier import PushoverNotifier
@@ -31,17 +31,13 @@ from .metrics_calculator import (
 )
 from .markdown_updater import update_markdown_file
 from utils.logger import get_logger, OWLLogger
+from utils.validation import validate_venv_python
 from data.repository import AtomicJSONRepository
 
-MARKDOWN_FILE = cfg.MARKDOWN_FILE
-STATE_FILE = cfg.STATE_FILE
-USERNAME = cfg.USERNAME
-TOTAL_UNITS_IN_COURSE = cfg.TOTAL_UNITS_IN_COURSE
-GOAL_DAYS = cfg.GOAL_DAYS  # 18 months
+# All constants imported directly from cfg
 
-# --- Baseline Metrics (from config) ---
-BASE_LESSONS_PER_UNIT = cfg.BASE_LESSONS_PER_UNIT
-BASE_MINS_PER_LESSON = cfg.BASE_MINS_PER_LESSON
+# Initialize logger as module-level variable
+logger = None
 
 def get_current_date():
     """Get current date as YYYY-MM-DD string."""
@@ -78,7 +74,8 @@ def reset_daily_lessons_if_needed(state_data, json_data=None):
         print(f"🌅 New day detected! Reset daily counters for {current_date}")
         print(f"   Today's lessons found: {todays_lessons}")
         try:
-            logger.state_change(f"New day reset: {current_date}, today's lessons: {todays_lessons}")
+            if logger:
+                logger.info(f"New day reset: {current_date}, today's lessons: {todays_lessons}")
         except: pass
         return True, state_data
     
@@ -101,7 +98,8 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
     
     print(f"📱 Sent {time_slot} notification")
     try:
-        logger.external_call(f"Notification sent: {time_slot} slot")
+        if logger:
+            logger.external_call("notification", f"sent_{time_slot}_slot", success=True)
     except: pass
 
 def run_scraper():
@@ -109,27 +107,28 @@ def run_scraper():
     print("🚀 Starting scraper to fetch latest data...")
     try:
         # Find the python executable in the virtual environment
-        venv_python = 'duolingo_env/bin/python'
-        if not os.path.exists(venv_python):
-            print("❌ Virtual environment python not found. Please ensure duolingo_env is set up.")
+        venv_python = cfg.VENV_PYTHON_PATH
+        if not validate_venv_python():
             return False
 
         # Run the scraper script
         subprocess.run(
-            [venv_python, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scrapers', 'duome_raw_scraper.py')), '--username', USERNAME],
+            [venv_python, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scrapers', 'duome_raw_scraper.py')), '--username', cfg.USERNAME],
             check=True,
             capture_output=True,
             text=True
         )
         print("✅ Scraper ran successfully.")
         try:
-            logger.external_call("Scraper completed successfully")
+            if logger:
+                logger.external_call("scraper", "completed", success=True)
         except: pass
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Scraper script failed with error: {e.stderr}")
         try:
-            logger.external_call(f"Scraper failed: {e.stderr}")
+            if logger:
+                logger.external_call("scraper", "failed", success=False, error=str(e.stderr))
         except: pass
         return False
     except FileNotFoundError:
@@ -140,7 +139,7 @@ def find_latest_json_file():
     """Finds the most recently created JSON output file."""
     try:
         # Look for JSON files in the data directory
-        pattern = os.path.join(cfg.DATA_DIR, f'duome_raw_{USERNAME}_*.json')
+        pattern = os.path.join(cfg.DATA_DIR, f'duome_raw_{cfg.USERNAME}_*.json')
         list_of_files = glob.glob(pattern)
         if not list_of_files:
             return None
@@ -217,7 +216,7 @@ def main():
         json_data = json.load(f)
         
     # Load or create state data using atomic operations with versioning
-    state_repo = AtomicJSONRepository(STATE_FILE, auto_migrate=True)
+    state_repo = AtomicJSONRepository(cfg.STATE_FILE, auto_migrate=True)
     state_data = state_repo.load({})
 
     # Handle daily lesson tracking (now that we have json_data)
@@ -296,7 +295,7 @@ def main():
         print(f"🔄 Changes detected, updating tracker data...")
         
         # Get markdown content
-        with open(MARKDOWN_FILE, 'r') as f:
+        with open(cfg.MARKDOWN_FILE, 'r') as f:
             content = f.read()
             
         # Now pass all computed metrics to the markdown update function
@@ -324,9 +323,9 @@ def main():
             
             # Write the updated state back to disk atomically
             if state_repo.save(state_data):
-                print(f"✅ State file '{STATE_FILE}' updated with latest data.")
+                print(f"✅ State file '{cfg.STATE_FILE}' updated with latest data.")
             else:
-                print(f"❌ Failed to save state file '{STATE_FILE}'")
+                print(f"❌ Failed to save state file '{cfg.STATE_FILE}'")
         else:
             print("❌ Failed to update markdown file.")
     else:
@@ -343,4 +342,6 @@ def main():
             has_new_lessons, has_new_units, len(newly_completed), json_data
         )
 
- 
+
+if __name__ == "__main__":
+    main()

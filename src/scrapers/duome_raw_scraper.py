@@ -6,6 +6,17 @@ Automatically clicks the "update your stats" button before scraping
 Now includes daily lesson counts and unit-specific analysis
 """
 
+import os
+import sys
+
+# Add project root and src to path for imports
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
+SRC_DIR = os.path.join(PROJECT_ROOT, 'src')
+
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, SRC_DIR)
+
 import re
 import json
 import requests
@@ -109,7 +120,8 @@ def scrape_duome_headless_with_timestamp(username):
         
         # Setup headless Firefox
         driver = setup_firefox_driver(headless=True)
-        url = f"https://duome.eu/{username}"
+        from utils.path_utils import build_duome_url
+        url = build_duome_url(username)
         driver.get(url)
         
         # Wait for page load
@@ -244,7 +256,8 @@ def click_duome_update_button(driver, username):
 
 def fetch_duome_data_with_update(username, headless=True):
     """Fetch raw data from duome.eu with automatic stats update using Firefox"""
-    url = f"https://duome.eu/{username}"
+    from utils.path_utils import build_duome_url
+    url = build_duome_url(username)
     print(f"Opening Firefox browser and navigating to {url}...")
     
     driver = None
@@ -382,17 +395,14 @@ def fetch_duome_data(username):
     
     Use fetch_duome_data_with_update() instead for reliable fresh data.
     """
-    url = f"https://duome.eu/{username}"
+    from utils.path_utils import build_duome_url
+    url = build_duome_url(username)
     print(f"Fetching data from {url} (fallback method)...")
     
     try:
         # Add headers to mimic a browser request (sometimes needed to avoid blocks)  
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-        }
+        from utils.constants import DEFAULT_HEADERS
+        headers = DEFAULT_HEADERS
         
         response = requests.get(url, headers=headers, timeout=15)  # Add timeout
         response.raise_for_status()

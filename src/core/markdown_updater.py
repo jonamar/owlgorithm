@@ -8,14 +8,7 @@ Extracted from daily_tracker.py for better organization and testability.
 import re
 from datetime import datetime
 from config import app_config as cfg
-from .metrics_calculator import calculate_performance_metrics, get_tracked_unit_progress, TRACKABLE_TOTAL_UNITS
-
-# Import configuration constants
-MARKDOWN_FILE = cfg.MARKDOWN_FILE
-TOTAL_UNITS_IN_COURSE = cfg.TOTAL_UNITS_IN_COURSE
-GOAL_DAYS = cfg.GOAL_DAYS  # 18 months
-BASE_LESSONS_PER_UNIT = cfg.BASE_LESSONS_PER_UNIT
-BASE_MINS_PER_LESSON = cfg.BASE_MINS_PER_LESSON
+from .metrics_calculator import calculate_performance_metrics, get_tracked_unit_progress
 
 
 def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None, state_data=None):
@@ -50,7 +43,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
         completed_units_old = int(completed_units_match.group(1))
         print(f"Found completed units: {completed_units_old}")
     except (AttributeError, ValueError) as e:
-        print(f"❌ Could not parse 'Completed Units' from {MARKDOWN_FILE}: {e}")
+        print(f"❌ Could not parse 'Completed Units' from {cfg.MARKDOWN_FILE}: {e}")
         return False
 
     # --- Calculate new values using centralized calculation throughout ---
@@ -59,7 +52,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     new_remaining_units = progress['remaining_units']  # Use centralized calculation  
     total_lessons_remaining = progress['total_lessons_remaining']
     lessons_per_day_required = progress['required_lessons_per_day']
-    time_per_day_required_mins = lessons_per_day_required * BASE_MINS_PER_LESSON
+    time_per_day_required_mins = lessons_per_day_required * cfg.BASE_MINS_PER_LESSON
     
     hours = int(time_per_day_required_mins // 60)
     minutes = int(time_per_day_required_mins % 60)
@@ -67,8 +60,8 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
 
     # --- Update content with new values ---
     # Update Total Units in Course to show trackable units (not full course)
-    content = re.sub(r"(\*\*Total Units in Course\*\*:\s*)(\d+)", rf"\g<1>{TRACKABLE_TOTAL_UNITS}", content)
-    content = re.sub(r"(Total Units in Course:\s*)(\d+)", rf"\g<1>{TRACKABLE_TOTAL_UNITS}", content)
+    content = re.sub(r"(\*\*Total Units in Course\*\*:\s*)(\d+)", rf"\g<1>{cfg.TRACKABLE_TOTAL_UNITS}", content)
+    content = re.sub(r"(Total Units in Course:\s*)(\d+)", rf"\g<1>{cfg.TRACKABLE_TOTAL_UNITS}", content)
     
     # Handle both "Completed Units:" and "**Completed Units**:" formats
     content = re.sub(r"(\*\*Completed Units\*\*:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
@@ -150,7 +143,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     goal_section = f"""
 ### 18-Month Goal Progress (Started {progress['goal_start_date']})
 - **Goal End Date**: {progress['goal_end_date']}
-- **Days Elapsed**: {progress['days_elapsed']} of 548 days ({progress['completion_percentage']:.1f}% complete)
+- **Days Elapsed**: {progress['days_elapsed']} of {cfg.GOAL_DAYS} days ({progress['completion_percentage']:.1f}% complete)
 - **Historical Pace**: {progress['actual_units_per_day']:.3f} units/day, {progress['actual_lessons_per_day']:.1f} lessons/day  
 - **Required Pace**: {progress['required_units_per_day']:.3f} units/day, {progress['required_lessons_per_day']:.1f} lessons/day
 - **Status**: {progress['pace_status']}
@@ -171,10 +164,10 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     
     content = re.sub(r"(\*Last updated:\s*)[\w\s,]+", rf"\g<1>{datetime.now().strftime('%B %d, %Y')}", content)
 
-    with open(MARKDOWN_FILE, 'w') as f:
+    with open(cfg.MARKDOWN_FILE, 'w') as f:
         f.write(content)
     
-    print(f"✅ Successfully updated {MARKDOWN_FILE}.")
+    print(f"✅ Successfully updated {cfg.MARKDOWN_FILE}.")
     if newly_completed_count > 0:
         print(f"   - Newly Completed Units: {newly_completed_count}")
     

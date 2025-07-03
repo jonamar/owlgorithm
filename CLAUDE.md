@@ -160,3 +160,7 @@ Environment: Python 3.7+, virtual environment recommended
 - State management prevents duplicate notifications
 - **Daily goal**: Hardcoded to 12 lessons/day (no dynamic calculation to avoid bugs)
 - **Automation status**: ✅ Working with headless scraping
+
+## Development Principles
+
+- If you think you fixed broken functionality, assume you are wrong until you have proof. First level proof is running a manual end-to-end test of the real system. Second level proof is when prescheduled automation runs successfully. The user can confirm whether they have received a notification in both cases.

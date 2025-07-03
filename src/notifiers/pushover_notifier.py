@@ -5,11 +5,22 @@ Handles sending push notifications via Pushover API for Duolingo progress update
 """
 
 import os
+import sys
 import json
 import requests
-from config import app_config as cfg
 from datetime import datetime
-from src.core.metrics_calculator import get_tracked_unit_progress
+
+# Add project root and src to path for imports
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
+SRC_DIR = os.path.join(PROJECT_ROOT, 'src')
+
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, SRC_DIR)
+
+from config import app_config as cfg
+# Import will be done locally to avoid circular imports
+from utils.constants import NOTIFICATION_TIMEOUT
 
 class PushoverNotifier:
     """Handles Pushover API notifications."""
@@ -75,7 +86,7 @@ class PushoverNotifier:
             print("📱 Pushover notifications not configured or disabled")
             return False
         
-        url = "https://api.pushover.net/1/messages.json"
+        url = cfg.PUSHOVER_API_URL
         data = {
             'token': self.config['app_token'],
             'user': self.config['user_key'],
@@ -86,7 +97,7 @@ class PushoverNotifier:
         }
         
         try:
-            response = requests.post(url, data=data, timeout=10)
+            response = requests.post(url, data=data, timeout=NOTIFICATION_TIMEOUT)
             response.raise_for_status()
             
             result = response.json()
@@ -115,6 +126,7 @@ class PushoverNotifier:
         
         # Use centralized progress calculation if state data available
         if state_data:
+            from core.metrics_calculator import get_tracked_unit_progress
             progress = get_tracked_unit_progress(state_data)
             message += f"Total Sessions: {progress['total_lessons']:,}\n"
             message += f"Progress: {progress['completed_units']} units ({progress['lessons_per_unit']:.1f} lessons/unit)\n"

@@ -6,29 +6,29 @@ back to Selenium-based automation.
 """
 from __future__ import annotations
 
+import os
+import sys
 from typing import Optional
 import requests
 
+# Add project root and src to path for imports
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
+SRC_DIR = os.path.join(PROJECT_ROOT, 'src')
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/114.0.0.0 Safari/537.36"
-    ),
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif," "image/webp,*/*;q=0.8"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Connection": "keep-alive",
-}
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, SRC_DIR)
 
-REQUEST_TIMEOUT = 15  # seconds
+from utils.constants import DEFAULT_HEADERS, DEFAULT_REQUEST_TIMEOUT
+
+HEADERS = DEFAULT_HEADERS
+REQUEST_TIMEOUT = DEFAULT_REQUEST_TIMEOUT
 
 
 def fetch_duome_page(username: str) -> Optional[str]:
     """Return HTML of `https://duome.eu/<username>` or ``None`` on failure."""
-    url = f"https://duome.eu/{username}"
+    from utils.path_utils import build_duome_url
+    url = build_duome_url(username)
     try:
         resp = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
