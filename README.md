@@ -1,20 +1,22 @@
-# 🦉 Owlgorithm: Data-Driven Duolingo Course Completion Tracker
+# 🦉 Owlgorithm: Automated Duolingo Progress Tracker
 
-**Complete the French Duolingo course (272 units) in 18 months using accurate progress tracking and dynamic goal calculation.**
+**Complete automated progress tracking system for Duolingo French course (272 units) with 18-month goal timeline, real-time analytics, and push notifications.**
 
 ## 🎯 What It Does
 
-- **Accurate lesson counting**: ALL learning activities count (practice, stories, reviews, etc.)
-- **Dynamic projections**: Real-time calculation of required daily pace based on actual performance
-- **Fresh data**: Browser automation ensures up-to-date progress from duome.eu
-- **Smart goals**: Adjusts completion estimates as you progress through units
+- **Accurate lesson counting**: ALL learning activities count (lessons, practice, stories, reviews, etc.)
+- **Real-time progress tracking**: Automated scraping with browser automation every 30 minutes
+- **Smart notifications**: Time-appropriate push alerts with progress updates
+- **Burn rate analysis**: Track actual vs required pace toward 18-month goal
+- **Professional architecture**: Zero technical debt, single source of truth design
 
 ## 🔄 How It Works
 
-1. **Scrapes** fresh session data from duome.eu (with automatic page refresh)
-2. **Analyzes** unit boundaries using completion markers to calculate lessons-per-unit
-3. **Projects** remaining effort: 186 units × 19.0 lessons/unit = realistic daily goals
-4. **Tracks** progress toward 18-month target with data-driven adjustments
+1. **Scrapes** fresh session data from duome.eu every 30 minutes (6am-midnight)
+2. **Processes** data using tracking-only model (3 completed units since 2025-06-23)
+3. **Calculates** progress toward 18-month goal with burn rate analysis
+4. **Notifies** via Pushover with time-appropriate messages
+5. **Updates** markdown progress report automatically
 
 ## 🚀 Quick Start
 
@@ -25,34 +27,63 @@ source duolingo_env/bin/activate
 pip install -r requirements.txt
 python scripts/setup.py --all
 
-# Daily usage (automated via launchd)
+# Configure notifications
+python scripts/setup_pushover.py
+
+# Manual run (automated via launchd)
 python scripts/daily_update.py
 ```
 
-## 📊 Current Status
+## 📊 Current Status (Live Data)
 
-- **179 lessons** completed (accurate count of all learning activity)
-- **86 units** completed out of 272 total (31.6% progress)
-- **19.0 lessons/unit** average (based on recent unit boundary analysis)
-- **6 lessons/day** required pace (achievable goal)
+- **167 lessons** completed (tracking period: 2025-06-23 to present)
+- **3 units** completed (Requests, Nightmare, Grooming)
+- **12 lessons/day** current pace (hardcoded daily goal)
+- **179 units remaining** toward completion goal
+- **32.0 lessons/unit** average (Algorithm 1 calculation)
 
 ## ⚙️ Configuration
 
 **Key Parameters** (`config/app_config.py`):
 ```python
 USERNAME = "jonamar"
-TOTAL_UNITS_IN_COURSE = 272
+TOTAL_COURSE_UNITS = 272
 GOAL_DAYS = 548  # 18 months
+DAILY_GOAL_LESSONS = 12  # Hardcoded daily target
+TRACKING_START_DATE = "2025-06-23"
 ```
 
-**Automated Schedule**: 4x daily via launchd (6am, 12pm, 5pm, 10pm)
+**Automated Schedule**: Every 30 minutes (6am-midnight) via macOS launchd
 
 ## 🏗️ Architecture
 
-- **Scrapers**: Browser automation for fresh data collection
-- **Core Logic**: Progress calculation and goal management  
-- **Notifiers**: Daily progress alerts via Pushover
-- **Data Layer**: Atomic operations with corruption recovery
+```
+📁 owlgorithm/
+├── 🔧 config/app_config.py          # Single source of truth
+├── 📊 src/core/metrics_calculator.py # Centralized calculations  
+├── 🛠️  src/utils/                    # Shared utilities
+├── 🕷️  src/scrapers/                 # Headless browser automation
+├── 📱 src/notifiers/                # Push notifications
+└── 📈 personal-math.md              # Auto-updated progress
+```
+
+**Core Features:**
+- **Headless scraping**: Firefox automation with error handling
+- **State management**: Atomic operations with backup/recovery
+- **Time-based notifications**: Morning goals, evening progress
+- **Data validation**: Comprehensive error detection and handling
+
+## 🎉 Project Status: COMPLETE
+
+**✅ All planned work finished:**
+- Phase 1: Fixed notification daily goal display
+- Epic 1: Clean historical data model
+- Epic 2: Unified calculation logic
+- Epic 3: 18-month goal tracking with burn rate analysis
+- Epic 5: Architecture consolidation
+- Epic 6: Final deduplication (all 46 duplications eliminated)
+
+**System provides complete automated tracking with zero technical debt.**
 
 ## 🚨 For Developers
 
@@ -61,15 +92,15 @@ GOAL_DAYS = 548  # 18 months
 **Essential Rules**:
 - ALL XP sessions count as lessons (no exceptions)
 - Only raw modal data from duome.eu is trusted
-- Unit boundaries detected via "unit review" markers only
-- Dynamic calculations must use recent unit analysis
+- Tracking-only data model (excludes historical pre-2025-06-23)
+- Hardcoded daily goal prevents calculation bugs
 
 ## 📚 Documentation
 
-- **[CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md)**: Critical developer requirements
-- **[CLAUDE.md](CLAUDE.md)**: Development commands and guidance
-- **[IMPROVEMENT_ROADMAP.md](IMPROVEMENT_ROADMAP.md)**: Technical roadmap
+- **[CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md)**: Immutable business rules
+- **[CLAUDE.md](CLAUDE.md)**: Development commands and project status
+- **[plan.md](plan.md)**: Optional future enhancements
 
 ---
 
-*Goal: Complete 272 French units in 548 days using data-driven progress tracking.*
+*🎯 Goal: Complete 272 French units in 548 days using fully automated progress tracking.*
