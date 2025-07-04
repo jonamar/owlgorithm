@@ -72,11 +72,11 @@ Based on comprehensive audit, **46 duplication instances** remain across 7 categ
 - ✅ Replaced hardcoded date with `cfg.ANALYSIS_START_DATE`
 - ✅ **Test Results**: Pipeline working, notification received
 
-##### **Micro-Epic 3: API URLs**
-**Time**: 15 minutes | **Risk**: LOW | **Files**: 2
-- Add `PUSHOVER_API_URL` to config
-- Update notifier to use config value
-- **Test Protocol**: **CRITICAL** - Verify notification actually sends
+##### **Micro-Epic 3: API URLs** ✅ **COMPLETED**
+**Status**: ALREADY RESOLVED | **Files**: 2
+- ✅ `PUSHOVER_API_URL` already exists in `config/app_config.py:31`
+- ✅ `src/notifiers/pushover_notifier.py:89` already uses `cfg.PUSHOVER_API_URL`
+- ✅ **Test Results**: Pipeline working, notification sent successfully
 
 ##### **Micro-Epic 4: Timing Values**
 **Time**: 25 minutes | **Risk**: MEDIUM | **Files**: 3
