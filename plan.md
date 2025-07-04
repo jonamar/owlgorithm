@@ -47,73 +47,80 @@ The major architectural work has been successfully completed:
 ## 🚨 **REMAINING WORK**
 
 ### **Epic 6: Final Deduplication & Code Cleanup**
-**Priority**: HIGH | **Effort**: 3-5 hours | **Status**: Ready to implement
+**Priority**: HIGH | **Status**: Ready to implement
 
-#### **Critical Issues to Address**
-Based on comprehensive audit, **46 duplication instances** remain:
+Based on comprehensive audit, **46 duplication instances** remain across 7 categories.
 
-1. **User-Agent Headers** (2 instances)
-   - `src/scrapers/duome_raw_scraper.py:390-395`
-   - `src/scrapers/http_fetcher.py:13-24`
-   - **Fix**: Use shared constant from `src/utils/constants.py`
+#### **Ultra-Conservative Implementation Plan**
 
-2. **URL Construction** (4+ instances)
-   - Manual `https://duome.eu/{username}` building in multiple files
-   - **Fix**: Use `build_duome_url(username)` utility function
+> **🚨 LESSON LEARNED**: Last refactor broke automation due to too many changes without testing.  
+> **NEW APPROACH**: Change 1 thing → Test everything → Repeat
 
-3. **sys.path Setup** (9 instances)
-   - Similar path manipulation code scattered across scripts
-   - **Fix**: Use `setup_project_paths()` from `src/utils/path_utils.py`
+**Break into 7 Micro-Epics** (20-40 minutes each with full testing):
 
-4. **Date Constants** (2 instances)
-   - `TRACKING_START_DATE` in config vs `ANALYSIS_START_DATE` in scraper
-   - **Fix**: Use `cfg.TRACKING_START_DATE` consistently
+##### **Micro-Epic 1: User-Agent Headers** ✅ **COMPLETED**
+**Status**: ALREADY RESOLVED | **Files**: 2
+- ✅ `DEFAULT_USER_AGENT` already exists in `src/utils/constants.py`
+- ✅ `src/scrapers/http_fetcher.py` already uses shared constant correctly
+- ✅ `src/scrapers/duome_raw_scraper.py` already uses shared constant correctly
+- ✅ **Test Results**: Pipeline working, notification received
 
-5. **API URLs** (hardcoded)
-   - `https://api.pushover.net/1/messages.json` in `src/notifiers/pushover_notifier.py`
-   - **Fix**: Move to config as `PUSHOVER_API_URL`
+##### **Micro-Epic 2: Date Constants**
+**Time**: 15 minutes | **Risk**: VERY LOW | **Files**: 1
+- Replace `ANALYSIS_START_DATE` with `cfg.TRACKING_START_DATE` in scraper
+- **Test Protocol**: Full pipeline test
 
-6. **Magic Numbers** (scattered)
-   - Values like 272, 183, 31, 12 still hardcoded in various files
-   - **Fix**: Replace with named constants from config
+##### **Micro-Epic 3: API URLs**
+**Time**: 15 minutes | **Risk**: LOW | **Files**: 2
+- Add `PUSHOVER_API_URL` to config
+- Update notifier to use config value
+- **Test Protocol**: **CRITICAL** - Verify notification actually sends
 
-7. **Timing Values** (scattered)
-   - Sleep/timeout values in multiple locations
-   - **Fix**: Centralize in config timing section
+##### **Micro-Epic 4: Timing Values**
+**Time**: 25 minutes | **Risk**: MEDIUM | **Files**: 3
+- Add timing constants to config
+- Update scraper and http_fetcher timing usage
+- **Test Protocol**: **EXTRA CRITICAL** - Timing changes could break scraping
 
-#### **Implementation Plan**
+##### **Micro-Epic 5: URL Construction**
+**Time**: 30 minutes | **Risk**: MEDIUM | **Files**: 3
+- Complete `build_duome_url()` in path_utils
+- Update all URL construction sites
+- **Test Protocol**: Verify scraper can still reach duome.eu
 
-**Phase 1: Critical Consolidation (2-3 hours)**
-1. **Update Existing Utility Modules**:
-   - Enhance `src/utils/constants.py` with missing constants
-   - Add missing functions to `src/utils/path_utils.py`
-   - Complete `src/utils/validation.py` utilities
+##### **Micro-Epic 6: sys.path Setup**
+**Time**: 35 minutes | **Risk**: HIGH | **Files**: 9
+- Complete `setup_project_paths()` utility
+- Update all scripts **one by one**
+- **Test Protocol**: Test after EACH script update (high import risk)
 
-2. **Update Config**:
-   ```python
-   # Add to config/app_config.py
-   VENV_PYTHON_PATH: str = "duolingo_env/bin/python"
-   PUSHOVER_API_URL: str = "https://api.pushover.net/1/messages.json"
-   DEFAULT_REQUEST_TIMEOUT: int = 15
-   DEFAULT_SCRAPE_DELAY: int = 12
-   ```
+##### **Micro-Epic 7: Magic Numbers**
+**Time**: 40 minutes | **Risk**: LOW | **Files**: Multiple
+- Add missing constants to config
+- Replace hardcoded numbers
+- **Test Protocol**: Full pipeline test
 
-3. **Replace All Duplicated Usage**:
-   - Update scrapers to use shared constants
-   - Replace manual URL building with utility functions
-   - Replace sys.path manipulation with shared setup
-   - Use config constants instead of hardcoded values
+#### **Mandatory Testing Protocol Per Micro-Epic**
+```bash
+# After EVERY change:
+python -c "from src.core.daily_tracker import main; print('Imports OK')"
+python comprehensive_test.py
+python scripts/daily_update.py
+# Verify notification received on phone
+```
 
-**Phase 2: Polish & Validation (1-2 hours)**
-1. **Final Cleanup Pass**:
-   - Verify all 46 duplication instances are eliminated
-   - Ensure consistent imports across all files
-   - Validate all utility functions are being used
+#### **Rollback Protocol**
+If ANY test fails:
+1. **STOP immediately**
+2. `git checkout HEAD~1` (rollback last change)
+3. Re-test to confirm working
+4. Debug issue before proceeding
 
-2. **Testing**:
-   - Run comprehensive pipeline test
-   - Verify automation still working
-   - Confirm no functionality regressions
+#### **Implementation Schedule**
+- **Day 1**: Micro-Epics 1-3 (Low risk, 1.5 hours)
+- **Day 2**: Micro-Epics 4-5 (Medium risk, 1.5 hours)  
+- **Day 3**: Micro-Epics 6-7 (High risk, 2 hours)
+- **Automation Check**: After every 2 micro-epics, wait for automated run
 
 #### **Success Criteria**
 - [ ] Zero duplicate User-Agent definitions
