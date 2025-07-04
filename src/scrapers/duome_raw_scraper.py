@@ -31,6 +31,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 # Removed Chrome imports - using Firefox only
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from config import app_config as cfg
 
 def validate_headless_update_with_timestamps(username, wait_seconds=30):
     """
@@ -648,10 +649,9 @@ def calculate_recent_lessons_per_unit(sessions):
         return None
     
     # HARD-CODED CONSTRAINT: Only analyze data from first complete unit (Nightmare) onwards
-    ANALYSIS_START_DATE = '2025-06-19'  # Nightmare unit start - first complete unit
-    filtered_sessions = [s for s in sessions if s['date'] >= ANALYSIS_START_DATE]
+    filtered_sessions = [s for s in sessions if s['date'] >= cfg.ANALYSIS_START_DATE]
     
-    print(f"📊 Algorithm 1 constraints: Using sessions from {ANALYSIS_START_DATE} onwards")
+    print(f"📊 Algorithm 1 constraints: Using sessions from {cfg.ANALYSIS_START_DATE} onwards")
     print(f"📊 Filtered {len(sessions)} → {len(filtered_sessions)} sessions for analysis")
     
     # Sort sessions chronologically (oldest first) for proper unit detection

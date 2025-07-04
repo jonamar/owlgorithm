@@ -65,10 +65,12 @@ Based on comprehensive audit, **46 duplication instances** remain across 7 categ
 - ✅ `src/scrapers/duome_raw_scraper.py` already uses shared constant correctly
 - ✅ **Test Results**: Pipeline working, notification received
 
-##### **Micro-Epic 2: Date Constants**
-**Time**: 15 minutes | **Risk**: VERY LOW | **Files**: 1
-- Replace `ANALYSIS_START_DATE` with `cfg.TRACKING_START_DATE` in scraper
-- **Test Protocol**: Full pipeline test
+##### **Micro-Epic 2: Date Constants** ✅ **COMPLETED**
+**Status**: DUPLICATION ELIMINATED | **Files**: 2
+- ✅ Added `ANALYSIS_START_DATE` to `config/app_config.py`
+- ✅ Added config import to `src/scrapers/duome_raw_scraper.py`
+- ✅ Replaced hardcoded date with `cfg.ANALYSIS_START_DATE`
+- ✅ **Test Results**: Pipeline working, notification received
 
 ##### **Micro-Epic 3: API URLs**
 **Time**: 15 minutes | **Risk**: LOW | **Files**: 2
