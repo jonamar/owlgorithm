@@ -85,11 +85,12 @@ Based on comprehensive audit, **46 duplication instances** remain across 7 categ
 - ✅ Replaced `timeout=15` → `timeout=DEFAULT_REQUEST_TIMEOUT` (1 instance)
 - ✅ **Test Results**: Pipeline working, notification received
 
-##### **Micro-Epic 5: URL Construction**
-**Time**: 30 minutes | **Risk**: MEDIUM | **Files**: 3
-- Complete `build_duome_url()` in path_utils
-- Update all URL construction sites
-- **Test Protocol**: Verify scraper can still reach duome.eu
+##### **Micro-Epic 5: URL Construction** ✅ **COMPLETED**
+**Status**: ALREADY RESOLVED | **Files**: 3
+- ✅ `build_duome_url()` function exists in `src/utils/path_utils.py:30`
+- ✅ All scrapers correctly use centralized URL construction (6 instances)
+- ✅ No manual `https://duome.eu/{username}` patterns found
+- ✅ **Test Results**: Pipeline working, notification confirmed received
 
 ##### **Micro-Epic 6: sys.path Setup**
 **Time**: 35 minutes | **Risk**: HIGH | **Files**: 9
