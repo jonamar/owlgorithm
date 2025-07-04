@@ -34,7 +34,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from config import app_config as cfg
 from utils.constants import DEFAULT_SCRAPE_DELAY, DEFAULT_REQUEST_TIMEOUT
 
-def validate_headless_update_with_timestamps(username, wait_seconds=30):
+def validate_headless_update_with_timestamps(username, wait_seconds=cfg.VALIDATION_WAIT_SECONDS):
     """
     Validate that headless button clicks work by checking timestamp changes.
     
@@ -127,7 +127,7 @@ def scrape_duome_headless_with_timestamp(username):
         driver.get(url)
         
         # Wait for page load
-        WebDriverWait(driver, 15).until(
+        WebDriverWait(driver, cfg.BROWSER_WAIT_TIMEOUT).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
         
@@ -274,7 +274,7 @@ def fetch_duome_data_with_update(username, headless=True):
         
         # Wait for page to load and update to complete
         print("Waiting for page to load and stats to update...")
-        WebDriverWait(driver, 15).until(
+        WebDriverWait(driver, cfg.BROWSER_WAIT_TIMEOUT).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
         

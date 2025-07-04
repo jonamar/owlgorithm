@@ -9,6 +9,10 @@ current_dir = os.path.dirname(__file__)
 project_root = os.path.abspath(os.path.join(current_dir, '..'))
 sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'src'))
+
+from utils.path_utils import setup_project_paths
+setup_project_paths()
+
 from src.notifiers.pushover_notifier import PushoverNotifier
 
 def main():

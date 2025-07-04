@@ -47,11 +47,11 @@ def get_current_time_slot():
     """Determine current time slot for notifications."""
     hour = datetime.now().hour
     
-    if 5 <= hour < 11:
+    if cfg.MORNING_START_HOUR <= hour < cfg.MORNING_END_HOUR:
         return 'morning'
-    elif 11 <= hour < 16:
+    elif cfg.MORNING_END_HOUR <= hour < cfg.MIDDAY_END_HOUR:
         return 'midday'
-    elif 16 <= hour < 21:
+    elif cfg.MIDDAY_END_HOUR <= hour < cfg.EVENING_END_HOUR:
         return 'evening'
     else:
         return 'night'
