@@ -78,11 +78,12 @@ Based on comprehensive audit, **46 duplication instances** remain across 7 categ
 - ✅ `src/notifiers/pushover_notifier.py:89` already uses `cfg.PUSHOVER_API_URL`
 - ✅ **Test Results**: Pipeline working, notification sent successfully
 
-##### **Micro-Epic 4: Timing Values**
-**Time**: 25 minutes | **Risk**: MEDIUM | **Files**: 3
-- Add timing constants to config
-- Update scraper and http_fetcher timing usage
-- **Test Protocol**: **EXTRA CRITICAL** - Timing changes could break scraping
+##### **Micro-Epic 4: Timing Values** ✅ **COMPLETED**
+**Status**: DUPLICATIONS ELIMINATED | **Files**: 1
+- ✅ Added timing constants import to `src/scrapers/duome_raw_scraper.py`
+- ✅ Replaced `time.sleep(12)` → `time.sleep(DEFAULT_SCRAPE_DELAY)` (2 instances)
+- ✅ Replaced `timeout=15` → `timeout=DEFAULT_REQUEST_TIMEOUT` (1 instance)
+- ✅ **Test Results**: Pipeline working, notification received
 
 ##### **Micro-Epic 5: URL Construction**
 **Time**: 30 minutes | **Risk**: MEDIUM | **Files**: 3

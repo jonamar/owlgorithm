@@ -32,6 +32,7 @@ from selenium.webdriver.support import expected_conditions as EC
 # Removed Chrome imports - using Firefox only
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from config import app_config as cfg
+from utils.constants import DEFAULT_SCRAPE_DELAY, DEFAULT_REQUEST_TIMEOUT
 
 def validate_headless_update_with_timestamps(username, wait_seconds=30):
     """
@@ -140,7 +141,7 @@ def scrape_duome_headless_with_timestamp(username):
             print("⚠️ Update button click failed, but continuing...")
         
         # Wait for update to process
-        time.sleep(12)
+        time.sleep(DEFAULT_SCRAPE_DELAY)
         
         # Extract timestamp AFTER update attempt
         timestamp_after = extract_duome_timestamp(driver)
@@ -330,7 +331,7 @@ def fetch_duome_data_with_update(username, headless=True):
             
         # Give additional time for the update to complete
         print("Allowing time for stats update to complete...")
-        time.sleep(12)  # Increased wait time for update to process
+        time.sleep(DEFAULT_SCRAPE_DELAY)  # Wait time for update to process
         
         # Verify the update by checking for timestamp
         try:
@@ -405,7 +406,7 @@ def fetch_duome_data(username):
         from utils.constants import DEFAULT_HEADERS
         headers = DEFAULT_HEADERS
         
-        response = requests.get(url, headers=headers, timeout=15)  # Add timeout
+        response = requests.get(url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.content
         
