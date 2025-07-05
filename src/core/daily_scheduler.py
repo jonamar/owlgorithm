@@ -35,10 +35,14 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import argparse
 
-# Adjust path to import config when run as script
+# Setup project paths - must be done before other imports
 current_dir = os.path.dirname(__file__)
-sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))
-sys.path.append(os.path.abspath(os.path.join(current_dir, '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..', '..')))
+
+# Now import utilities
+from utils.path_utils import build_duome_url
+from utils.constants import SUBPROCESS_TIMEOUT
 from config import app_config as cfg
 import json
 
@@ -81,7 +85,7 @@ class DailyDuolingoTracker:
             ]
             
             self.logger.info(f"Running duome scraper for {self.username}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=SUBPROCESS_TIMEOUT)
             
             if result.returncode == 0:
                 self.logger.info("Scraper completed successfully")
@@ -93,7 +97,7 @@ class DailyDuolingoTracker:
                 return False
                 
         except subprocess.TimeoutExpired:
-            self.logger.error("Scraper timed out after 5 minutes")
+            self.logger.error(f"Scraper timed out after {SUBPROCESS_TIMEOUT} seconds")
             return False
         except Exception as e:
             self.logger.error(f"Error running scraper: {e}")
@@ -191,7 +195,7 @@ class DailyDuolingoTracker:
         report += f"""
 
 📅 Report generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-🔗 Profile: https://duome.eu/{self.username}
+🔗 Profile: {build_duome_url(self.username)}
 """
         
         return report
@@ -276,6 +280,6 @@ def main():
     print("\n💡 Tips:")
     print(f"   • Run with --setup-cron to see scheduling instructions")
     print(f"   • Check your data: ls -la {args.data_dir}/")
-    print(f"   • View profile at: https://duome.eu/{args.username}")
+    print(f"   • View profile at: {build_duome_url(args.username)}")
 
  

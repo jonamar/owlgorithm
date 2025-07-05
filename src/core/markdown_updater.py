@@ -8,14 +8,7 @@ Extracted from daily_tracker.py for better organization and testability.
 import re
 from datetime import datetime
 from config import app_config as cfg
-from .metrics_calculator import calculate_performance_metrics
-
-# Import configuration constants
-MARKDOWN_FILE = cfg.MARKDOWN_FILE
-TOTAL_UNITS_IN_COURSE = cfg.TOTAL_UNITS_IN_COURSE
-GOAL_DAYS = cfg.GOAL_DAYS  # 18 months
-BASE_LESSONS_PER_UNIT = cfg.BASE_LESSONS_PER_UNIT
-BASE_MINS_PER_LESSON = cfg.BASE_MINS_PER_LESSON
+from .metrics_calculator import calculate_performance_metrics, get_tracked_unit_progress
 
 
 def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None, state_data=None):
@@ -50,21 +43,26 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
         completed_units_old = int(completed_units_match.group(1))
         print(f"Found completed units: {completed_units_old}")
     except (AttributeError, ValueError) as e:
-        print(f"❌ Could not parse 'Completed Units' from {MARKDOWN_FILE}: {e}")
+        print(f"❌ Could not parse 'Completed Units' from {cfg.MARKDOWN_FILE}: {e}")
         return False
 
-    # --- Calculate new values using baseline constants ---
-    new_completed_units = completed_units_old + newly_completed_count
-    new_remaining_units = TOTAL_UNITS_IN_COURSE - new_completed_units
-    total_lessons_remaining = new_remaining_units * BASE_LESSONS_PER_UNIT
-    lessons_per_day_required = total_lessons_remaining / GOAL_DAYS
-    time_per_day_required_mins = lessons_per_day_required * BASE_MINS_PER_LESSON
+    # --- Calculate new values using centralized calculation throughout ---
+    progress = get_tracked_unit_progress(state_data, json_data)
+    new_completed_units = progress['completed_units']  # Use centralized calculation (tracking-only)
+    new_remaining_units = progress['remaining_units']  # Use centralized calculation  
+    total_lessons_remaining = progress['total_lessons_remaining']
+    lessons_per_day_required = progress['required_lessons_per_day']
+    time_per_day_required_mins = lessons_per_day_required * cfg.BASE_MINS_PER_LESSON
     
     hours = int(time_per_day_required_mins // 60)
     minutes = int(time_per_day_required_mins % 60)
     time_per_day_str = f"~{hours} hour {minutes} minutes"
 
     # --- Update content with new values ---
+    # Update Total Units in Course to show trackable units (not full course)
+    content = re.sub(r"(\*\*Total Units in Course\*\*:\s*)(\d+)", rf"\g<1>{cfg.TRACKABLE_TOTAL_UNITS}", content)
+    content = re.sub(r"(Total Units in Course:\s*)(\d+)", rf"\g<1>{cfg.TRACKABLE_TOTAL_UNITS}", content)
+    
     # Handle both "Completed Units:" and "**Completed Units**:" formats
     content = re.sub(r"(\*\*Completed Units\*\*:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
     content = re.sub(r"(Completed Units:\s*)(\d+)", rf"\g<1>{new_completed_units}", content)
@@ -118,54 +116,58 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
             content = re.sub(r"(\*\*Recent Performance\*\*.*?:\s*)[\d.]+\s*lessons/day,\s*[\d,]+\s*XP/day", 
                           rf"\g<1>{metrics['recent_avg_sessions']:.1f} lessons/day, {metrics['recent_avg_xp']:.0f} XP/day", content)
         
-        # Update goal progress metrics using recent unit analysis
-        total_completed_units = state_data.get('total_completed_units', 86)
-        remaining_units = TOTAL_UNITS_IN_COURSE - total_completed_units
-        
-        # Try to get lessons per unit from recent unit analysis
-        recent_unit_analysis = json_data.get('recent_unit_analysis')
-        if recent_unit_analysis and metrics:
-            avg_lessons_per_unit = recent_unit_analysis['average_lessons_per_unit']
-            completed_units_analyzed = recent_unit_analysis['completed_units_analyzed']
-            
-            # Calculate projections
-            total_lessons_needed = remaining_units * avg_lessons_per_unit
-            current_avg = metrics['daily_avg_sessions']
-            daily_req = total_lessons_needed / 548  # 18 months
-            pace_diff = current_avg - daily_req
-            
-            # Determine pace status
-            if pace_diff >= 0:
-                pace_status = f"✅ AHEAD by {pace_diff:.1f} lessons/day"
-            else:
-                pace_status = f"⚠️ BEHIND by {abs(pace_diff):.1f} lessons/day"
-            
-            # Calculate projected completion
-            projected_days = total_lessons_needed / current_avg if current_avg > 0 else 0
-            projected_months = projected_days / 30.44  # avg days per month
-            
-            # Update daily requirement
-            content = re.sub(r"(\*\*Daily Requirement\*\*:\s*)[\d.]+\s*lessons/day.*", 
-                          rf"\g<1>{daily_req:.1f} lessons/day (based on {completed_units_analyzed} recent completed units, {avg_lessons_per_unit:.1f} avg lessons/unit)", content)
-            
-            # Update pace status
-            content = re.sub(r"(\*\*Pace Status\*\*:\s*).*lessons/day", 
-                          rf"\g<1>{pace_status}", content)
-            
-            # Update projected completion
-            content = re.sub(r"(\*\*Projected Completion\*\*:\s*)[\d.]+\s*months.*", 
-                          rf"\g<1>{projected_months:.1f} months ({abs(projected_months - 18):.1f} months {'early' if projected_months < 18 else 'late'})", content)
-            
-            # Update total lessons needed
-            content = re.sub(r"(\*\*Total Lessons Needed\*\*:\s*)[\d,]+\s*lessons.*", 
-                          rf"\g<1>{total_lessons_needed:,.0f} lessons ({remaining_units} remaining units)", content)
+    # Update goal progress metrics using centralized calculation (always run)
+    progress = get_tracked_unit_progress(state_data, json_data)
+    
+    # Update daily requirement using centralized calculation
+    content = re.sub(r"(\*\*Daily Requirement\*\*:\s*)[\d.]+\s*lessons/day.*", 
+                  rf"\g<1>{progress['required_lessons_per_day']:.1f} lessons/day (based on {progress['completed_units']} tracked units, {progress['lessons_per_unit']:.1f} avg lessons/unit)", content)
+    
+    # Update pace status using centralized calculation
+    content = re.sub(r"(\*\*Pace Status\*\*:\s*).*lessons/day", 
+                  rf"\g<1>{progress['pace_status']}", content)
+    
+    # Calculate projected completion using centralized data
+    projected_days = progress['total_lessons_remaining'] / progress['current_daily_avg'] if progress['current_daily_avg'] > 0 else 0
+    projected_months = projected_days / 30.44  # avg days per month
+    
+    # Update projected completion
+    content = re.sub(r"(\*\*Projected Completion\*\*:\s*)[\d.]+\s*months.*", 
+                  rf"\g<1>{projected_months:.1f} months ({abs(projected_months - 18):.1f} months {'early' if projected_months < 18 else 'late'})", content)
+    
+    # Update total lessons needed using centralized calculation
+    content = re.sub(r"(\*\*Total Lessons Needed\*\*:\s*)[\d,]+\s*lessons.*", 
+                  rf"\g<1>{progress['total_lessons_remaining']:,.0f} lessons ({progress['remaining_units']} remaining units)", content)
+    
+    # Add or update 18-month goal progress section
+    goal_section = f"""
+### 18-Month Goal Progress (Started {progress['goal_start_date']})
+- **Goal End Date**: {progress['goal_end_date']}
+- **Days Elapsed**: {progress['days_elapsed']} of {cfg.GOAL_DAYS} days ({progress['completion_percentage']:.1f}% complete)
+- **Historical Pace**: {progress['actual_units_per_day']:.3f} units/day, {progress['actual_lessons_per_day']:.1f} lessons/day  
+- **Required Pace**: {progress['required_units_per_day']:.3f} units/day, {progress['required_lessons_per_day']:.1f} lessons/day
+- **Status**: {progress['pace_status']}
+- **Projected Completion**: {progress['projected_completion_date']} ({abs(progress['months_difference']):.1f} months {'early' if progress['months_difference'] < 0 else 'late'})
+
+*This section will be updated as more units are completed.*
+"""
+    
+    # Check if 18-month goal section already exists and replace it, or add it
+    if "### 18-Month Goal Progress" in content:
+        # Replace existing section
+        content = re.sub(r"### 18-Month Goal Progress.*?\*This section will be updated as more units are completed\.\*\s*", 
+                      goal_section, content, flags=re.DOTALL)
+    else:
+        # Insert before "### Completion Goal: 18 Months"
+        content = re.sub(r"(### Completion Goal: 18 Months)", 
+                      goal_section + r"\1", content)
     
     content = re.sub(r"(\*Last updated:\s*)[\w\s,]+", rf"\g<1>{datetime.now().strftime('%B %d, %Y')}", content)
 
-    with open(MARKDOWN_FILE, 'w') as f:
+    with open(cfg.MARKDOWN_FILE, 'w') as f:
         f.write(content)
     
-    print(f"✅ Successfully updated {MARKDOWN_FILE}.")
+    print(f"✅ Successfully updated {cfg.MARKDOWN_FILE}.")
     if newly_completed_count > 0:
         print(f"   - Newly Completed Units: {newly_completed_count}")
     

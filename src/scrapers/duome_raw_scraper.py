@@ -6,6 +6,17 @@ Automatically clicks the "update your stats" button before scraping
 Now includes daily lesson counts and unit-specific analysis
 """
 
+import os
+import sys
+
+# Add project root and src to path for imports
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
+SRC_DIR = os.path.join(PROJECT_ROOT, 'src')
+
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, SRC_DIR)
+
 import re
 import json
 import requests
@@ -20,8 +31,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 # Removed Chrome imports - using Firefox only
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from config import app_config as cfg
+from utils.constants import DEFAULT_SCRAPE_DELAY, DEFAULT_REQUEST_TIMEOUT
 
-def validate_headless_update_with_timestamps(username, wait_seconds=30):
+def validate_headless_update_with_timestamps(username, wait_seconds=cfg.VALIDATION_WAIT_SECONDS):
     """
     Validate that headless button clicks work by checking timestamp changes.
     
@@ -109,11 +122,12 @@ def scrape_duome_headless_with_timestamp(username):
         
         # Setup headless Firefox
         driver = setup_firefox_driver(headless=True)
-        url = f"https://duome.eu/{username}"
+        from utils.path_utils import build_duome_url
+        url = build_duome_url(username)
         driver.get(url)
         
         # Wait for page load
-        WebDriverWait(driver, 15).until(
+        WebDriverWait(driver, cfg.BROWSER_WAIT_TIMEOUT).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
         
@@ -127,7 +141,7 @@ def scrape_duome_headless_with_timestamp(username):
             print("⚠️ Update button click failed, but continuing...")
         
         # Wait for update to process
-        time.sleep(12)
+        time.sleep(DEFAULT_SCRAPE_DELAY)
         
         # Extract timestamp AFTER update attempt
         timestamp_after = extract_duome_timestamp(driver)
@@ -244,7 +258,8 @@ def click_duome_update_button(driver, username):
 
 def fetch_duome_data_with_update(username, headless=True):
     """Fetch raw data from duome.eu with automatic stats update using Firefox"""
-    url = f"https://duome.eu/{username}"
+    from utils.path_utils import build_duome_url
+    url = build_duome_url(username)
     print(f"Opening Firefox browser and navigating to {url}...")
     
     driver = None
@@ -259,7 +274,7 @@ def fetch_duome_data_with_update(username, headless=True):
         
         # Wait for page to load and update to complete
         print("Waiting for page to load and stats to update...")
-        WebDriverWait(driver, 15).until(
+        WebDriverWait(driver, cfg.BROWSER_WAIT_TIMEOUT).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
         
@@ -316,7 +331,7 @@ def fetch_duome_data_with_update(username, headless=True):
             
         # Give additional time for the update to complete
         print("Allowing time for stats update to complete...")
-        time.sleep(12)  # Increased wait time for update to process
+        time.sleep(DEFAULT_SCRAPE_DELAY)  # Wait time for update to process
         
         # Verify the update by checking for timestamp
         try:
@@ -382,19 +397,16 @@ def fetch_duome_data(username):
     
     Use fetch_duome_data_with_update() instead for reliable fresh data.
     """
-    url = f"https://duome.eu/{username}"
+    from utils.path_utils import build_duome_url
+    url = build_duome_url(username)
     print(f"Fetching data from {url} (fallback method)...")
     
     try:
         # Add headers to mimic a browser request (sometimes needed to avoid blocks)  
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-        }
+        from utils.constants import DEFAULT_HEADERS
+        headers = DEFAULT_HEADERS
         
-        response = requests.get(url, headers=headers, timeout=15)  # Add timeout
+        response = requests.get(url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.content
         
@@ -638,10 +650,9 @@ def calculate_recent_lessons_per_unit(sessions):
         return None
     
     # HARD-CODED CONSTRAINT: Only analyze data from first complete unit (Nightmare) onwards
-    ANALYSIS_START_DATE = '2025-06-19'  # Nightmare unit start - first complete unit
-    filtered_sessions = [s for s in sessions if s['date'] >= ANALYSIS_START_DATE]
+    filtered_sessions = [s for s in sessions if s['date'] >= cfg.ANALYSIS_START_DATE]
     
-    print(f"📊 Algorithm 1 constraints: Using sessions from {ANALYSIS_START_DATE} onwards")
+    print(f"📊 Algorithm 1 constraints: Using sessions from {cfg.ANALYSIS_START_DATE} onwards")
     print(f"📊 Filtered {len(sessions)} → {len(filtered_sessions)} sessions for analysis")
     
     # Sort sessions chronologically (oldest first) for proper unit detection
