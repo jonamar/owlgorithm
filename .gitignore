@@ -55,6 +55,9 @@ duolingo_data/
 *.swo
 *~
 
+# Claude AI workspace configuration
+.claude/
+
 # OS
 .DS_Store
 .DS_Store?
