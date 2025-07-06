@@ -85,6 +85,29 @@ TRACKING_START_DATE = "2025-06-23"
 
 **System provides complete automated tracking with zero technical debt.**
 
+## 📜 License
+
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+
+This permissive license allows commercial use, modification, and distribution while providing patent protection and legal clarity for both individual and enterprise adoption.
+
+## 🎯 Philosophy & Approach
+
+### Data-Driven Learning
+Owlgorithm believes in **objective progress tracking** over subjective feelings. Real data reveals patterns that intuition might miss, helping you optimize your learning pace and identify what actually works.
+
+### Automation First
+**Set it and forget it.** Manual tracking fails because life gets busy. Automation ensures consistency and removes the burden of remembering to check your progress.
+
+### Simplicity Over Features
+**Do one thing exceptionally well.** Rather than building a complex dashboard with dozens of features, we focus on accurate tracking and smart notifications that actually help.
+
+### Privacy & Control
+**Your data stays yours.** Everything runs locally on your machine. No cloud dependencies, no data sharing, no accounts required. You own and control every piece of information.
+
+### Gentle Motivation
+**Facts over guilt.** Our notifications provide actionable insights and concrete targets, not judgmental pressure or meaningless streaks.
+
 ## 🚨 For Developers
 
 **⚠️ CRITICAL**: Read [CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md) before making changes.
