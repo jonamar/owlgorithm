@@ -46,42 +46,84 @@ refactor(core): extract calculation utilities to separate module
 perf: optimize data processing pipeline
 ```
 
-## 🏷️ Version Management (REQUIRED)
+## 🏷️ Version Management: User Impact Threshold Approach
 
-This project follows **Semantic Versioning** (semver). **EVERY significant commit must include a version bump.**
+**Core Principle**: Version when users would care, not by calendar or commit count.
 
-### Version Bumping Rules:
+### **AI Agent Decision Framework**
+
+#### **Before Suggesting Version Bumps, Apply "Would I Update?" Test:**
+- **Yes, definitely** → MINOR or MAJOR bump
+- **Yes, if it's easy** → PATCH bump  
+- **Meh, not really** → Keep working, accumulate more changes
+
+#### **Version Bump Triggers (✅ DO):**
+- Completed a user-facing feature (however small)
+- Fixed a bug that impacts user experience  
+- Made setup/configuration easier
+- Added documentation that changes user workflow
+- Accumulated 3-5+ small improvements that add up
+- About to start risky work (lock in stable state)
+- Made a breaking change (immediate MAJOR bump required)
+
+#### **DON'T Version For (❌ AVOID):**
+- Internal refactoring with no user impact
+- Work-in-progress commits  
+- Dependency updates (unless user-visible)
+- Code style/formatting changes
+- Comment typo fixes
+- Single-line development fixes
+
+### **Version Bumping Rules:**
 - **MAJOR** (`X.0.0`): Breaking changes, config schema changes, API changes
 - **MINOR** (`x.Y.0`): New features, enhancements, backward-compatible additions
-- **PATCH** (`x.y.Z`): Bug fixes, documentation, maintenance
+- **PATCH** (`x.y.Z`): Bug fixes, documentation, small improvements
 
-### Required Actions for Each Commit:
-1. **Determine impact**: Does this change break existing functionality? Add features? Fix bugs?
+### **Required Actions for Version Bumps:**
+1. **Apply "Would I Update?" test** - Ensure user value exists
 2. **Update VERSION file**: `echo "2.1.0" > VERSION` 
-3. **Update CHANGELOG.md**: Add entry under appropriate version section
-4. **Use conventional commit**: Include version bump in commit message
+3. **Update CHANGELOG.md**: Add user-focused entries (not implementation details)
+4. **Use conventional commit**: Include version bump rationale
 
-### Version Bump Examples:
+### **Version Bump Examples:**
 ```bash
 # MAJOR version bump (breaking changes)
 chore: bump version to 3.0.0 - migrate launchd to cron (BREAKING CHANGE)
 
 # MINOR version bump (new features)  
-chore: bump version to 2.1.0 - add cross-platform automation support
+chore: bump version to 2.1.0 - email notifications support
 
-# PATCH version bump (fixes/docs)
-chore: bump version to 2.0.1 - fix IndexError in scraper
+# PATCH version bump (fixes/improvements)
+chore: bump version to 2.0.1 - better error messages and M1 Mac support
 ```
 
-### Commit Type → Version Impact:
-- `feat` → **MINOR** bump (new feature)
-- `fix` → **PATCH** bump (bug fix)
-- `docs` → **PATCH** bump (documentation)
-- `chore` → **PATCH** bump (maintenance)
-- `perf` → **MINOR** bump (enhancement)
-- `BREAKING CHANGE` → **MAJOR** bump (breaking)
+### **Changelog Writing Rules for AI Agents:**
+- **Focus on user impact**, not implementation details
+- **Group by user benefits**: What problems does this solve?
+- **Use plain language**: Avoid technical jargon
+- **Lead with value**: Why users should care about this change
 
-**DO NOT commit significant changes without updating the version number!**
+```markdown
+# Good (user-focused):
+### Added
+- Email notifications as Pushover alternative
+- Dry-run mode for safe testing
+
+### Fixed
+- Setup now works correctly on M1 Macs
+- Clearer error messages when dependencies missing
+
+# Bad (implementation-focused):
+### Added  
+- SMTP client class with TLS support
+- --dry-run flag in ArgumentParser
+
+### Fixed
+- Architecture detection in subprocess calls
+- ImportError exception handling
+```
+
+**DO NOT suggest version bumps without clear user value!**
 
 ## 🚨 Critical Business Rules (READ FIRST)
 
@@ -145,20 +187,22 @@ config/app_config.py         # User copy (gitignored)
 ## 🚀 Release Process
 
 ### Version Bumping:
-1. Update `VERSION` file with semantic versioning
-2. Update `CHANGELOG.md` with new changes
-3. Commit with: `chore: bump version to X.Y.Z`
-4. Test full workflow before tagging
+1. Apply "Would I Update?" test to accumulated changes
+2. Update `VERSION` file with semantic versioning
+3. Update `CHANGELOG.md` with user-focused entries
+4. Commit with: `chore: bump version to X.Y.Z - [user benefit summary]`
+5. Test full workflow before proceeding
 
-### Semantic Versioning:
-- **MAJOR**: Breaking changes (config schema, core business logic)
-- **MINOR**: New features (notification backends, setup improvements)  
-- **PATCH**: Bug fixes, documentation, minor improvements
+### Quality Gates Before Version Bump:
+- [ ] Can I explain why users would want this version in one sentence?
+- [ ] Does the changelog read like "user benefits" not "code changes"?
+- [ ] Are breaking changes clearly highlighted with migration notes?
+- [ ] Has the system been tested end-to-end recently?
 
 ## 💡 Best Practices
 
 ### Commit Frequency:
-- Small, focused commits are preferred
+- Small, atomic commits are preferred
 - One logical change per commit
 - Commit working increments, not broken code
 - Use meaningful commit messages (follow conventional commits)
@@ -186,3 +230,4 @@ Before committing, verify:
 - [ ] Error handling for new failure modes
 - [ ] Backward compatibility maintained
 - [ ] Performance impact considered 
+- [ ] If user-facing changes exist, consider version bump using "Would I Update?" test 

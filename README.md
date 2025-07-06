@@ -56,50 +56,16 @@ That's it! Your system will now automatically track your progress and send notif
 4. **Notifies** you with smart, time-appropriate messages
 5. **Updates** your progress dashboard automatically
 
-## ⚙️ Configuration
+## 📊 Versioning & Updates
 
-Edit `config/app_config.py` to customize:
+Owlgorithm follows user-focused versioning:
 
-```python
-# Your Duolingo username
-USERNAME = "your_username"
+- **New versions** are released when there's genuine value for users (new features, important fixes, easier setup)
+- **Check CHANGELOG.md** for user-friendly release notes explaining what's new and why you'd want to update
+- **Semantic versioning**: MAJOR.MINOR.PATCH based on impact to your workflow
+- **No forced cadence**: Updates happen when they're worth your time, not on artificial schedules
 
-# Course configuration
-TOTAL_COURSE_UNITS = 272  # Adjust for your target language
-GOAL_DAYS = 548          # 18 months = 548 days
-DAILY_GOAL_LESSONS = 12  # Target lessons per day
-
-# Notification settings
-PUSHOVER_ENABLED = True
-MORNING_START_HOUR = 6
-EVENING_END_HOUR = 23
-```
-
-## 📈 Current Status
-
-- **Architecture**: Complete with zero technical debt
-- **Automation**: Fully functional cross-platform setup
-- **Data Model**: Tracking-only approach (clean, reliable)
-- **Notifications**: Time-based intelligent messaging
-- **Goal Tracking**: Dynamic burn rate analysis
-
-## 🏗️ Project Structure
-
-```
-owlgorithm/
-├── 📁 config/           # Configuration files
-├── 📁 docs/             # All documentation
-├── 📁 scripts/          # Setup and automation scripts
-├── 📁 src/              # Source code
-│   ├── 📁 core/         # Business logic
-│   ├── 📁 scrapers/     # Web scraping
-│   ├── 📁 notifiers/    # Push notifications
-│   └── 📁 utils/        # Shared utilities
-├── 📁 tests/            # Test suite
-├── 📄 README.md         # This file
-├── 📄 requirements.txt  # Python dependencies
-└── 📄 VERSION           # Current version
-```
+**Current Version**: See [VERSION](VERSION) file and [CHANGELOG.md](CHANGELOG.md) for latest improvements.
 
 ## 📚 Documentation
 
