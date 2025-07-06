@@ -64,6 +64,10 @@ echo "1.1.0" > VERSION
 
 ### Setup & Environment
 ```bash
+# Install geckodriver (REQUIRED for browser automation)
+brew install geckodriver  # macOS
+sudo apt install geckodriver  # Linux
+
 # Create and activate virtual environment
 python -m venv duolingo_env
 source duolingo_env/bin/activate  # On Windows: duolingo_env\Scripts\activate

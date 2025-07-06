@@ -147,7 +147,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
 - **Historical Pace**: {progress['actual_units_per_day']:.3f} units/day, {progress['actual_lessons_per_day']:.1f} lessons/day  
 - **Required Pace**: {progress['required_units_per_day']:.3f} units/day, {progress['required_lessons_per_day']:.1f} lessons/day
 - **Status**: {progress['pace_status']}
-- **Projected Completion**: {progress['projected_completion_date']} ({abs(progress['months_difference']):.1f} months {'early' if progress['months_difference'] < 0 else 'late'})
+- **Projected Completion**: {progress['projected_completion_date']} ({abs(progress['months_difference'] or 0):.1f} months {'early' if (progress['months_difference'] or 0) < 0 else 'late'})
 
 *This section will be updated as more units are completed.*
 """

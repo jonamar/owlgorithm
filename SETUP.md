@@ -6,8 +6,35 @@ This guide will help you set up your own Duolingo progress tracker in under 10 m
 
 - Python 3.8+ installed on your system
 - Firefox browser (for web scraping)
+- **geckodriver** (Firefox WebDriver)
 - A Duolingo account with some progress
 - Optional: Pushover account for notifications
+
+### Installing geckodriver
+
+**macOS (with Homebrew):**
+```bash
+brew install geckodriver
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt install firefox-geckodriver
+# or
+sudo apt install geckodriver
+```
+
+**Linux (CentOS/RHEL):**
+```bash
+sudo yum install geckodriver
+```
+
+**Manual Installation (all platforms):**
+1. Download from [GitHub releases](https://github.com/mozilla/geckodriver/releases)
+2. Extract and place in your PATH (e.g., `/usr/local/bin/`)
+3. Make executable: `chmod +x geckodriver`
+
+**Note:** The system will automatically fall back to downloading geckodriver if not found, but installing it system-wide is more reliable for automation.
 
 ## 🚀 Quick Start
 
@@ -179,10 +206,31 @@ Edit the notification messages in `src/notifiers/pushover_notifier.py`
 
 ## 🔍 Troubleshooting
 
-### Firefox Issues
+### Browser Automation Issues
+
+**Test Firefox automation:**
 ```bash
-# Test Firefox automation
 python src/scrapers/duome_raw_scraper.py --validate-headless --username YOUR_USERNAME
+```
+
+**geckodriver not found:**
+```bash
+# Install geckodriver (see Prerequisites section above)
+brew install geckodriver  # macOS
+sudo apt install geckodriver  # Linux
+
+# Verify installation
+which geckodriver
+geckodriver --version
+```
+
+**Automation hanging/zombie processes:**
+```bash
+# Clean up hanging processes
+pkill -f geckodriver
+pkill -f Firefox.*mozprofile
+
+# This is now handled automatically by the system
 ```
 
 ### Virtual Environment Path

@@ -167,7 +167,10 @@ def scrape_duome_headless_with_timestamp(username):
         }
     finally:
         if driver:
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception:
+                cleanup_zombie_processes()  # Only cleanup on quit failure
 
 
 def extract_duome_timestamp(driver):
@@ -365,20 +368,54 @@ def fetch_duome_data_with_update(username, headless=True):
         
     finally:
         if driver:
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception:
+                cleanup_zombie_processes()  # Only cleanup on quit failure
+
+
+def cleanup_zombie_processes():
+    """Clean up hanging geckodriver processes (minimal prevention).""" 
+    import subprocess
+    try:
+        result = subprocess.run(['pkill', '-f', 'geckodriver'], capture_output=True)
+        if result.returncode == 0:
+            print("🧹 Cleaned up hanging geckodriver processes")
+    except Exception:
+        pass  # Non-critical, continue anyway
 
 
 def setup_firefox_driver(headless=True):
-    """Setup Firefox WebDriver"""
+    """Setup Firefox WebDriver with robust process management"""
     from selenium.webdriver.firefox.service import Service
     from selenium.webdriver.firefox.options import Options
-    from webdriver_manager.firefox import GeckoDriverManager
+    import shutil
+    
+    # Clean up any zombie processes before starting
+    cleanup_zombie_processes()
     
     firefox_options = Options()
     if headless:
         firefox_options.add_argument("--headless")
     
-    service = Service(GeckoDriverManager().install())
+    # Set explicit Firefox binary path for macOS
+    firefox_binary_path = "/Applications/Firefox.app/Contents/MacOS/firefox"
+    if os.path.exists(firefox_binary_path):
+        firefox_options.binary_location = firefox_binary_path
+        print(f"Using Firefox binary at: {firefox_binary_path}")
+    else:
+        print("Firefox binary not found at expected location, using system PATH")
+    
+    # Use system geckodriver instead of webdriver-manager
+    geckodriver_path = shutil.which('geckodriver')
+    if geckodriver_path:
+        print(f"Using system geckodriver at: {geckodriver_path}")
+        service = Service(geckodriver_path)
+    else:
+        print("System geckodriver not found, falling back to webdriver-manager")
+        from webdriver_manager.firefox import GeckoDriverManager
+        service = Service(GeckoDriverManager().install())
+    
     return webdriver.Firefox(service=service, options=firefox_options)
 
 
