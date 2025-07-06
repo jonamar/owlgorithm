@@ -73,7 +73,15 @@ class AutomationSetup:
         # Cron equivalent: */30 6-23 * * * + 0 0 * * *
         log_file = self.project_root / cfg.LOG_DIR / "automation.log"
         
+        # Add essential environment variables for cron
+        # Include PATH for homebrew and pyenv, plus other essentials
+        env_setup = (
+            f"export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH && "
+            f"export HOME={os.path.expanduser('~')} && "
+        )
+        
         cron_command = (
+            f"{env_setup}"
             f"cd {self.project_root} && "
             f"{self.python_path} {self.entry_script} "
             f">> {log_file} 2>&1"

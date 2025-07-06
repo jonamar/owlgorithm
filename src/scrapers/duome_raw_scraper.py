@@ -924,7 +924,10 @@ def scrape_duome(username, use_automation=True, headless=True):
     print(f"\n=== SUMMARY ===")
     print(f"Username: {username}")
     print(f"Total sessions: {len(sessions)}")
-    print(f"Date range: {sessions[-1]['date']} to {sessions[0]['date']}")
+    if sessions:
+        print(f"Date range: {sessions[-1]['date']} to {sessions[0]['date']}")
+    else:
+        print("Date range: No sessions found")
     
     # Daily summary
     print(f"\n=== DAILY LESSON COUNTS ===")
