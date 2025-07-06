@@ -8,39 +8,45 @@ Owlgorithm is a Python-based Duolingo progress tracker that scrapes data from du
 
 ## Development Guidelines
 
-### 📝 Conventional Commits
+### 📝 Conventional Commits & Semantic Versioning
 
-This project uses Conventional Commits for clear history and automatic changelog generation:
+This project uses **Conventional Commits** with **Semantic Versioning** for clear history and automatic changelog generation.
 
+**IMPORTANT**: Each significant commit should increment the version in `VERSION` file according to semver rules.
+
+#### Commit Format:
 ```bash
 # Format: <type>(<scope>): <description>
 
-# Examples:
-feat: add cross-platform notification support
-feat(notifiers): implement ntfy backend
-fix: resolve Firefox automation timeout issues  
-fix(scraper): handle missing session data gracefully
-docs: update README with philosophy section
-docs(setup): add troubleshooting guide
-chore: update dependencies to latest versions
-chore(config): migrate to new template format
-test: add unit tests for metrics calculator
-test(integration): validate scraper error handling
-refactor: simplify notification message logic
-refactor(core): extract calculation utilities
-perf: optimize data processing pipeline
-ci: add automated testing workflow
+# Examples with version increments:
+feat: add cross-platform notification support     # → MINOR version bump (1.0.0 → 1.1.0)
+feat(notifiers): implement ntfy backend          # → MINOR version bump
+fix: resolve Firefox automation timeout issues   # → PATCH version bump (1.1.0 → 1.1.1)
+fix(scraper): handle missing session data        # → PATCH version bump
+docs: update README with philosophy section       # → PATCH version bump (documentation)
+BREAKING CHANGE: migrate launchd to cron         # → MAJOR version bump (1.x.x → 2.0.0)
 ```
 
+#### Version Bumping Rules:
+- **MAJOR** (`X.0.0`): Breaking changes, API changes, config schema changes
+- **MINOR** (`x.Y.0`): New features, enhancements, backward-compatible additions  
+- **PATCH** (`x.y.Z`): Bug fixes, documentation, small improvements
+
+#### Required Actions:
+1. **Update VERSION file**: `echo "2.1.0" > VERSION`
+2. **Update CHANGELOG.md**: Add entries under appropriate version section
+3. **Commit with conventional format**: `chore: bump version to 2.1.0`
+
 **Commit Types:**
-- `feat`: New features or enhancements
-- `fix`: Bug fixes and error corrections
-- `docs`: Documentation updates
-- `chore`: Maintenance, dependencies, config
-- `test`: Adding or updating tests
-- `refactor`: Code improvements without behavior changes
-- `perf`: Performance optimizations
-- `ci`: CI/CD pipeline changes
+- `feat`: New features or enhancements → **MINOR** bump
+- `fix`: Bug fixes and error corrections → **PATCH** bump  
+- `docs`: Documentation updates → **PATCH** bump
+- `chore`: Maintenance, dependencies, config → **PATCH** bump
+- `test`: Adding or updating tests → **PATCH** bump
+- `refactor`: Code improvements without behavior changes → **PATCH** bump
+- `perf`: Performance optimizations → **MINOR** bump
+- `ci`: CI/CD pipeline changes → **PATCH** bump
+- `BREAKING CHANGE`: Any breaking change → **MAJOR** bump
 
 **Scopes (optional):**
 - `core`: Core tracking logic
@@ -50,14 +56,29 @@ ci: add automated testing workflow
 - `setup`: Setup and installation
 - `docs`: Documentation files
 
-### 🏷️ Version Management
+### 🏷️ Version Management Workflow
 
 ```bash
-# Update version after significant changes
-echo "1.1.0" > VERSION
+# 1. Make your changes
+# 2. Determine version impact:
+#    - Breaking change? → MAJOR (2.0.0 → 3.0.0)
+#    - New feature? → MINOR (2.0.0 → 2.1.0)  
+#    - Bug fix/docs? → PATCH (2.0.0 → 2.0.1)
 
-# Update CHANGELOG.md with new features
-# Follow semantic versioning: MAJOR.MINOR.PATCH
+# 3. Update version file
+echo "2.1.0" > VERSION
+
+# 4. Update CHANGELOG.md with changes
+# 5. Commit with conventional format
+git add VERSION CHANGELOG.md
+git commit -m "chore: bump version to 2.1.0
+
+- Add cross-platform automation support
+- Implement progress file renaming
+- Enhanced documentation and cleanup"
+
+# 6. Test the changes thoroughly
+python scripts/daily_update.py
 ```
 
 ## Key Commands

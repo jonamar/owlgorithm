@@ -46,6 +46,43 @@ refactor(core): extract calculation utilities to separate module
 perf: optimize data processing pipeline
 ```
 
+## 🏷️ Version Management (REQUIRED)
+
+This project follows **Semantic Versioning** (semver). **EVERY significant commit must include a version bump.**
+
+### Version Bumping Rules:
+- **MAJOR** (`X.0.0`): Breaking changes, config schema changes, API changes
+- **MINOR** (`x.Y.0`): New features, enhancements, backward-compatible additions
+- **PATCH** (`x.y.Z`): Bug fixes, documentation, maintenance
+
+### Required Actions for Each Commit:
+1. **Determine impact**: Does this change break existing functionality? Add features? Fix bugs?
+2. **Update VERSION file**: `echo "2.1.0" > VERSION` 
+3. **Update CHANGELOG.md**: Add entry under appropriate version section
+4. **Use conventional commit**: Include version bump in commit message
+
+### Version Bump Examples:
+```bash
+# MAJOR version bump (breaking changes)
+chore: bump version to 3.0.0 - migrate launchd to cron (BREAKING CHANGE)
+
+# MINOR version bump (new features)  
+chore: bump version to 2.1.0 - add cross-platform automation support
+
+# PATCH version bump (fixes/docs)
+chore: bump version to 2.0.1 - fix IndexError in scraper
+```
+
+### Commit Type → Version Impact:
+- `feat` → **MINOR** bump (new feature)
+- `fix` → **PATCH** bump (bug fix)
+- `docs` → **PATCH** bump (documentation)
+- `chore` → **PATCH** bump (maintenance)
+- `perf` → **MINOR** bump (enhancement)
+- `BREAKING CHANGE` → **MAJOR** bump (breaking)
+
+**DO NOT commit significant changes without updating the version number!**
+
 ## 🚨 Critical Business Rules (READ FIRST)
 
 Before making ANY changes, read `CORE_BUSINESS_LOGIC.md`. These rules are immutable:
