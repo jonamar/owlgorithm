@@ -35,7 +35,7 @@ class TestDataManager:
             mock_cfg.CONFIG_DIR = str(temp_dir / "config")
             mock_cfg.STATE_FILE = str(temp_dir / "tracker_state.json")
             mock_cfg.NOTIFIER_CONFIG_FILE = str(temp_dir / "config" / "pushover_config.json")
-            mock_cfg.MARKDOWN_FILE = str(temp_dir / "personal-math.md")
+            mock_cfg.MARKDOWN_FILE = str(temp_dir / "progress-dashboard.md")
             mock_cfg.USERNAME = "testuser"
             
             yield DataManager()
@@ -183,8 +183,8 @@ This is test content.
         data_manager.save_markdown_content(new_content)
         
         # Check backup was created
-        backup_path = f"{data_manager._pushover_config_repo.file_path.parent.parent / 'personal-math.md'}.backup"
-        with patch('src.data.data_manager.cfg.MARKDOWN_FILE', str(data_manager._pushover_config_repo.file_path.parent.parent / 'personal-math.md')):
+        backup_path = f"{data_manager._pushover_config_repo.file_path.parent.parent / 'progress-dashboard.md'}.backup"
+        with patch('src.data.data_manager.cfg.MARKDOWN_FILE', str(data_manager._pushover_config_repo.file_path.parent.parent / 'progress-dashboard.md')):
             assert os.path.exists(backup_path)
     
     def test_path_management(self, data_manager):
@@ -323,7 +323,7 @@ class TestIntegration:
             mock_cfg.CONFIG_DIR = str(temp_dir / "config")
             mock_cfg.STATE_FILE = str(temp_dir / "tracker_state.json")
             mock_cfg.NOTIFIER_CONFIG_FILE = str(temp_dir / "config" / "pushover_config.json")
-            mock_cfg.MARKDOWN_FILE = str(temp_dir / "personal-math.md")
+            mock_cfg.MARKDOWN_FILE = str(temp_dir / "progress-dashboard.md")
             mock_cfg.USERNAME = "testuser"
             
             data_manager = DataManager()

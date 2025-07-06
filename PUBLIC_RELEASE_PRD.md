@@ -108,7 +108,7 @@ git commit -m "phase 1.2 - add config template - tested E2E"
 
 - [x] **1.4** Clean git history (BONUS)
   - [x] Used BFG to remove `app_config.py` from entire git history
-  - [x] Verified personal files (`personal-math.md`, `tracker_state.json`) already clean
+  - [x] Verified personal files (`progress-dashboard.md`, `tracker_state.json`) already clean
   - [x] **Test E2E**: Local files safe, git history clean
   - [x] **Result**: Zero personal data in git history
 
@@ -211,7 +211,7 @@ owlgorithm/                 # Public repo
 ├── scripts/                # Setup and automation
 ├── docs/                   # Public documentation
 ├── data/                   # Your data (ignored)
-├── personal-math.md        # Your report (ignored)
+├── progress-dashboard.md        # Your report (ignored)
 ├── tracker_state.json      # Your state (ignored)
 └── .gitignore             # Protects personal files
 ```
@@ -309,7 +309,7 @@ owlgorithm/                 # Public repo
 
 ```bash
 # 1. Check file path flexibility
-grep -r "personal-math.md" src/
+grep -r "progress-dashboard.md" src/
 grep -r "tracker_state.json" src/
 grep -r "data/" src/
 grep -r "logs/" src/
@@ -379,7 +379,7 @@ echo "✅ E2E pipeline working"
 - **Automation paths**: ✅ Fixed launchd logging inconsistency
 
 ### **Questions for Discussion:**
-1. **Output files**: Should `personal-math.md` be configurable for public users?
+1. **Output files**: Should `progress-dashboard.md` be configurable for public users?
 2. **Directory structure**: Are the `data/`, `logs/` paths flexible or hardcoded?
 3. **Automation transition**: How do you want to handle the launchd → cron switch?
 4. **File name conflicts**: Any other files that might conflict with public use?
