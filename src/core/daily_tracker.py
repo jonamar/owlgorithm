@@ -93,7 +93,8 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
         daily_progress=daily_progress,
         units_completed=units_completed,
         total_lessons=total_lessons,
-        state_data=state_data
+        state_data=state_data,
+        json_data=json_data
     )
     
     print(f"📱 Push notification sent successfully!")

@@ -200,7 +200,7 @@ tail -f logs/automation.log
 
 ### Key Features
 - **Accurate lesson counting**: ALL XP-earning sessions count as lessons (no exceptions)
-- **Smart notifications**: Different messages for morning/midday/evening/night
+- **Enhanced notifications**: Dynamic progress insights with required pace, weekly averages, and projected finish dates
 - **Cross-platform automation**: Cron-based scheduling (macOS, Linux, WSL)
 - **Auto-refresh**: Clicks duome.eu update button before scraping
 - **Headless browser automation**: Firefox with enhanced error handling

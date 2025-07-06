@@ -189,13 +189,17 @@ def get_tracked_unit_progress(state_data, json_data=None):
     notifications and markdown updates for consistency.
     
     Args:
-        state_data (dict): Current tracker state data
+        state_data (dict): Current tracker state data (can be None for testing)
         json_data (dict): Optional session data for unit analysis
         
     Returns:
         dict: Standardized progress data for all components
     """
     from datetime import datetime, timedelta
+    
+    # Handle None state_data for testing/fallback scenarios
+    if state_data is None:
+        state_data = {}
     
     # Core tracking data (clean, no historical confusion)
     completed_units = len(cfg.TRACKED_COMPLETE_UNITS)

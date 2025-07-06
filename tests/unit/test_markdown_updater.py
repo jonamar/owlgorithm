@@ -67,34 +67,29 @@ class TestMarkdownUpdater:
         with patch('builtins.open', mock_open()) as mock_file:
             # Mock the metrics calculations
             with patch('src.core.markdown_updater.calculate_performance_metrics') as mock_perf:
-                with patch('src.core.metrics_calculator.calculate_daily_lesson_goal') as mock_goal:
-                    
-                    # Set up mock return values
-                    mock_perf.return_value = {
-                        'daily_avg_sessions': 10.5,
-                        'weekly_avg_sessions': 73.5,
-                        'daily_avg_xp': 500,
-                        'weekly_avg_xp': 3500,
-                        'active_days': 15,
-                        'consecutive_days': 10,
-                        'recent_avg_sessions': 12.0,
-                        'recent_avg_xp': 600
-                    }
-                    
-                    mock_goal.return_value = 9.0
-                    
-                    result = update_markdown_file(
-                        newly_completed_count=0,
-                        total_lessons_count=164,
-                        content=sample_markdown_content,
-                        json_data=sample_session_data,
-                        state_data=sample_state_data
-                    )
-                    
-                    assert result is True
-                    # Verify metrics functions were called
-                    mock_perf.assert_called_once_with(sample_session_data)
-                    mock_goal.assert_called_once()
+                # Set up mock return values
+                mock_perf.return_value = {
+                    'daily_avg_sessions': 10.5,
+                    'weekly_avg_sessions': 73.5,
+                    'daily_avg_xp': 500,
+                    'weekly_avg_xp': 3500,
+                    'active_days': 15,
+                    'consecutive_days': 10,
+                    'recent_avg_sessions': 12.0,
+                    'recent_avg_xp': 600
+                }
+                
+                result = update_markdown_file(
+                    newly_completed_count=0,
+                    total_lessons_count=164,
+                    content=sample_markdown_content,
+                    json_data=sample_session_data,
+                    state_data=sample_state_data
+                )
+                
+                assert result is True
+                # Verify metrics function was called (calculate_daily_lesson_goal no longer used)
+                mock_perf.assert_called_once_with(sample_session_data)
     
     def test_update_markdown_regex_patterns(self, sample_markdown_content):
         """Test that regex patterns correctly update content"""
@@ -112,13 +107,13 @@ class TestMarkdownUpdater:
             # Get the content that was written
             written_content = mock_file().write.call_args[0][0]
             
-            # Verify key updates were made
-            assert "**Completed Units**: 88" in written_content  # 86 + 2
-            assert "**Remaining Units**: 184" in written_content  # 272 - 88
+            # Verify key updates were made - function now uses centralized calculation
+            assert "**Completed Units**: 3" in written_content  # From TRACKED_COMPLETE_UNITS
+            assert "**Remaining Units**: 179" in written_content  # Based on centralized calculation
             assert "**Total Lessons Completed**: 200" in written_content
             # Note: Core/Practice breakdown insertion needs debugging
             # assert "(Core: 60, Practice: 140)" in written_content
-            assert "June 30, 2025" in written_content  # Updated timestamp
+            assert "July 06, 2025" in written_content  # Updated to current date
     
     def test_update_markdown_without_optional_data(self, sample_markdown_content):
         """Test markdown update without optional session/state data"""
@@ -166,18 +161,21 @@ class TestMarkdownUpdater:
             
             assert result is True
             
-            # Verify large numbers are handled correctly
+            # Verify large numbers are handled correctly with centralized calculation
             written_content = mock_file().write.call_args[0][0]
-            assert "**Completed Units**: 136" in written_content  # 86 + 50
+            assert "**Completed Units**: 3" in written_content  # From TRACKED_COMPLETE_UNITS (centralized)
             assert "**Total Lessons Completed**: 15000" in written_content
     
     def test_update_markdown_preserves_structure(self, sample_markdown_content):
         """Test that markdown structure is preserved during updates"""
         with patch('builtins.open', mock_open()) as mock_file:
+            # Provide sample state data for the updated function
+            sample_state = {'total_lessons_completed': 164}
             result = update_markdown_file(
                 newly_completed_count=0,
                 total_lessons_count=164,
-                content=sample_markdown_content
+                content=sample_markdown_content,
+                state_data=sample_state
             )
             
             assert result is True

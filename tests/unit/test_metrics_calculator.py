@@ -44,26 +44,25 @@ class TestCalculateDailyLessonGoal:
     """Test calculate_daily_lesson_goal function"""
     
     def test_calculate_daily_lesson_goal_basic(self, sample_state_data):
-        """Test basic daily goal calculation"""
+        """Test basic daily goal calculation - returns hardcoded value"""
         goal = calculate_daily_lesson_goal(sample_state_data)
-        # 86 units completed, 272 total, so 186 remaining
-        # 186 * 31 lessons/unit = 5766 lessons remaining
-        # 5766 / 548 days = ~10.5 lessons/day, rounded to 11
-        assert goal >= 10  # Should be around 10-11 lessons per day
+        # Function now returns hardcoded DAILY_GOAL_LESSONS (12) regardless of state
+        # This was changed to fix notification bugs with dynamic calculation
+        assert goal == 12
     
     def test_calculate_daily_lesson_goal_no_units(self):
-        """Test with no completed units"""
+        """Test with no completed units - returns hardcoded daily goal"""
         state_data = {'processed_units': []}
         goal = calculate_daily_lesson_goal(state_data)
-        # All 272 units remaining: 272 * 31 / 548 = ~15.4, rounded to 15
-        assert goal >= 15
+        # Function now returns hardcoded DAILY_GOAL_LESSONS (12) to fix notification bugs
+        assert goal == 12
     
     def test_calculate_daily_lesson_goal_minimum(self):
-        """Test minimum goal is always 1"""
-        # Edge case: almost all units completed
+        """Test returns hardcoded daily goal regardless of state"""
+        # Edge case: almost all units completed - but function returns hardcoded value
         state_data = {'processed_units': ['unit' + str(i) for i in range(271)]}
         goal = calculate_daily_lesson_goal(state_data)
-        assert goal >= 1  # Minimum is always 1
+        assert goal == 12  # Always returns hardcoded DAILY_GOAL_LESSONS
 
 
 class TestCalculateDailyProgress:

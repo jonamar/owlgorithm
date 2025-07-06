@@ -115,70 +115,65 @@ class PushoverNotifier:
             print(f"❌ Invalid response from Pushover API: {e}")
             return False
 
-    def send_simple_notification(self, daily_progress, units_completed=0, total_lessons=0, state_data=None):
-        """Send simplified notification using centralized calculation data."""
+    def _format_notification_message(self, daily_progress, state_data=None, json_data=None):
+        """Format the 3-line notification message (pure function for easy testing)."""
+        from core.metrics_calculator import get_tracked_unit_progress, calculate_performance_metrics
+        from datetime import datetime
+        
         completed = daily_progress['completed']
-        goal = daily_progress['goal']
-        pct = int(daily_progress['progress_pct'])
         
-        title = "📊 Duolingo Update"
-        message = f"Today: {completed}/{goal} lessons ({pct}%)\n"
+        if not state_data:
+            goal = daily_progress['goal']
+            pct = int(daily_progress['progress_pct'])
+            return f"{completed} / {goal} lessons ({pct}%)\nweek avg: calculating...\nfinish: calculating..."
         
-        # Use centralized progress calculation if state data available
-        if state_data:
-            from core.metrics_calculator import get_tracked_unit_progress
-            progress = get_tracked_unit_progress(state_data)
-            message += f"Total Sessions: {progress['total_lessons']:,}\n"
-            message += f"Progress: {progress['completed_units']} units ({progress['lessons_per_unit']:.1f} lessons/unit)\n"
-            message += f"Pace: {progress['pace_status']}\n"
-        else:
-            message += f"Total Sessions: {total_lessons:,}\n"
+        # Get dynamic calculations
+        progress = get_tracked_unit_progress(state_data)
+        required_pace = progress['required_lessons_per_day']
+        pct = int((completed / required_pace) * 100) if required_pace > 0 else 0
         
-        if units_completed > 0:
-            message += f"Units completed: {units_completed} 🎉\n"
+        # Weekly average
+        weekly_avg = 0
+        if json_data:
+            perf_metrics = calculate_performance_metrics(json_data)
+            if perf_metrics:
+                weekly_avg = perf_metrics['recent_avg_sessions']
         
-        message += f"Time: {datetime.now().strftime('%H:%M')}"
+        # Finish date with robust formatting
+        finish_line = "finish: calculating..."
+        projected_date = progress.get('projected_completion_date')
+        months_diff = progress.get('months_difference')
         
+        if projected_date and months_diff is not None:
+            try:
+                date_obj = datetime.strptime(projected_date, '%Y-%m-%d')
+                formatted_date = date_obj.strftime('%b %d, %Y')
+                
+                if abs(months_diff) < 0.1:
+                    timing = "on time"
+                elif months_diff < 0:
+                    timing = f"{abs(months_diff):.1f} mo early"
+                else:
+                    timing = f"{months_diff:.1f} mo late"
+                
+                finish_line = f"finish: {formatted_date} ({timing})"
+            except (ValueError, TypeError):
+                finish_line = f"finish: {projected_date}"
+        
+        # Build 3-line message
+        line1 = f"{completed} / {required_pace:.1f} lessons ({pct}%)"
+        line2 = f"week avg: {weekly_avg:.1f} per day" if weekly_avg > 0 else "week avg: calculating..."
+        line3 = finish_line
+        
+        return f"{line1}\n{line2}\n{line3}"
+
+    def send_simple_notification(self, daily_progress, state_data=None, json_data=None, **kwargs):
+        """Send enhanced 3-line notification with dynamic pace and finish date."""
+        title = "📊 Duolingo Progress"
+        message = self._format_notification_message(daily_progress, state_data, json_data)
         return self.send_notification(title, message, priority=0)
     
-    # Keep old methods for backward compatibility but redirect to simple version
-    def send_morning_notification(self, daily_goal, current_streak, yesterday_progress=None):
-        """Legacy method - redirects to simple notification."""
-        daily_progress = {'completed': 0, 'goal': daily_goal, 'progress_pct': 0}
-        return self.send_simple_notification(daily_progress)
-    
-    def send_midday_notification(self, daily_progress):
-        """Legacy method - redirects to simple notification."""
-        return self.send_simple_notification(daily_progress)
-    
-    def send_evening_notification(self, daily_progress):
-        """Legacy method - redirects to simple notification."""
-        return self.send_simple_notification(daily_progress)
-    
-    def send_night_notification(self, daily_progress, units_completed=0, trajectory_info=None):
-        """Legacy method - redirects to simple notification."""
-        return self.send_simple_notification(daily_progress, units_completed)
 
-    def send_daily_update(self, newly_completed_units, total_lessons, lessons_per_day_required, time_per_day_required):
-        """
-        Send a formatted daily progress update notification.
-        DEPRECATED: Use time-specific methods instead.
-        """
-        if newly_completed_units > 0:
-            title = f"🎉 Duolingo Progress - {newly_completed_units} Unit{'s' if newly_completed_units > 1 else ''} Completed!"
-            message = f"Great work! You completed {newly_completed_units} unit{'s' if newly_completed_units > 1 else ''} today.\n\n"
-        else:
-            title = "📊 Duolingo Daily Update"
-            message = "Daily progress check complete.\n\n"
-        
-        message += f"📈 Total Lessons: {total_lessons:,}\n"
-        message += f"🎯 Daily Target: ~{lessons_per_day_required:.1f} lessons\n"
-        message += f"⏰ Time Needed: {time_per_day_required}"
-        
-        # Use higher priority for unit completions
-        priority = 1 if newly_completed_units > 0 else 0
-        
-        return self.send_notification(title, message, priority)
     
     def test_notification(self):
         """Send a test notification to verify setup."""
