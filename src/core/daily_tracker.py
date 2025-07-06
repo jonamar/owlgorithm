@@ -96,10 +96,10 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
         state_data=state_data
     )
     
-    print(f"📱 Sent {time_slot} notification")
+    print(f"📱 Push notification sent successfully!")
     try:
         if logger:
-            logger.external_call("notification", f"sent_{time_slot}_slot", success=True)
+            logger.external_call("notification", "sent_unified", success=True)
     except: pass
 
 def run_scraper():
