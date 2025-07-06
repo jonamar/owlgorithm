@@ -7,9 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2025-07-06
+
+### Added
+- Created comprehensive documentation index (`docs/README.md`)
+- Organized project structure following FOSS best practices
+- Added clear documentation navigation and standards
+
 ### Changed
-- Updated documentation to emphasize conventional commits and semantic versioning
-- Cleaned up outdated planning documents
+- **BREAKING**: Moved all documentation files to `docs/` directory
+- **BREAKING**: Renamed `CORE_BUSINESS_LOGIC.md` to `docs/core-business-logic.md`
+- **BREAKING**: Renamed `CLAUDE.md` to `docs/claude.md`
+- **BREAKING**: Renamed `SETUP.md` to `docs/setup.md`
+- **BREAKING**: Renamed `CHANGELOG.md` to `docs/changelog.md`
+- **BREAKING**: Renamed `NOTIFICATION_ENHANCEMENT_PRD.md` to `docs/notification-enhancement-prd.md`
+- Moved `owlgorithm-backup.bundle` to `backups/` directory
+- Significantly improved README.md for new user experience
+- Updated all documentation references throughout the codebase
+- Streamlined root directory to reduce noise and improve navigation
+
+### Fixed
+- Updated all file path references in source code and documentation
+- Fixed documentation links in README.md and .cursorrules
+- Ensured all automation and setup scripts work with new structure
+
+### Documentation
+- Complete restructuring of documentation for better organization
+- New user-friendly README.md with clear quick start guide
+- Comprehensive documentation index with navigation guidance
+- Updated all cross-references to use new file locations
 
 ## [2.1.0] - 2025-07-06
 

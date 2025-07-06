@@ -85,7 +85,7 @@ chore: bump version to 2.0.1 - fix IndexError in scraper
 
 ## 🚨 Critical Business Rules (READ FIRST)
 
-Before making ANY changes, read `CORE_BUSINESS_LOGIC.md`. These rules are immutable:
+Before making ANY changes, read `docs/core-business-logic.md`. These rules are immutable:
 
 - **ALL XP sessions count as lessons** (no exceptions)
 - **Only raw modal data from duome.eu is trusted**

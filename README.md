@@ -1,160 +1,144 @@
 # 🦉 Owlgorithm: Automated Duolingo Progress Tracker
 
-**Complete automated progress tracking system for Duolingo French course (272 units) with 18-month goal timeline, real-time analytics, and push notifications.**
+**Complete automated progress tracking system for Duolingo with real-time analytics, smart notifications, and goal management.**
 
-## 🎯 What It Does
+> 🎯 **Current Focus**: French course (272 units) with 18-month completion goal
 
-- **Accurate lesson counting**: ALL learning activities count (lessons, practice, stories, reviews, etc.)
-- **Real-time progress tracking**: Automated scraping with browser automation every 30 minutes
-- **Smart notifications**: Time-appropriate push alerts with progress updates
-- **Burn rate analysis**: Track actual vs required pace toward 18-month goal
-- **Professional architecture**: Zero technical debt, single source of truth design
+## ✨ Key Features
 
-## 🔄 How It Works
-
-1. **Scrapes** fresh session data from duome.eu every 30 minutes (6am-midnight)
-2. **Processes** data using tracking-only model (3 completed units since 2025-06-23)
-3. **Calculates** progress toward 18-month goal with burn rate analysis
-4. **Notifies** via Pushover with time-appropriate messages
-5. **Updates** markdown progress report automatically
+- **📊 Accurate Progress Tracking**: Counts ALL learning activities (lessons, practice, stories, reviews)
+- **🤖 Fully Automated**: Scrapes progress every 30 minutes with zero manual intervention
+- **📱 Smart Notifications**: Time-appropriate push alerts via Pushover
+- **📈 Goal Analytics**: Track pace, burn rate, and completion projections
+- **🔒 Privacy-First**: All data stays local on your machine
 
 ## 🚀 Quick Start
 
+### Prerequisites
+- Python 3.8+ with pip
+- Firefox browser
+- [geckodriver](https://github.com/mozilla/geckodriver/releases) (for browser automation)
+
+### Installation
 ```bash
-# Setup
+# 1. Clone and setup
+git clone https://github.com/yourusername/owlgorithm.git
+cd owlgorithm
 python -m venv duolingo_env
-source duolingo_env/bin/activate
+source duolingo_env/bin/activate  # On Windows: duolingo_env\Scripts\activate
+
+# 2. Install dependencies
 pip install -r requirements.txt
+
+# 3. Run setup wizard
 python scripts/setup.py --all
 
-# Configure notifications
+# 4. Configure notifications (optional)
 python scripts/setup_pushover.py
 
-# Manual run (automated via launchd)
+# 5. Test the system
 python scripts/daily_update.py
 ```
 
-## 📊 Current Status (Live Data)
+### Automation Setup
+```bash
+# Set up automated tracking (every 30 minutes)
+python scripts/setup_cron.py setup
+```
 
-- **167 lessons** completed (tracking period: 2025-06-23 to present)
-- **3 units** completed (Requests, Nightmare, Grooming)
-- **12 lessons/day** current pace (hardcoded daily goal)
-- **179 units remaining** toward completion goal
-- **32.0 lessons/unit** average (Algorithm 1 calculation)
+That's it! Your system will now automatically track your progress and send notifications.
+
+## 📊 How It Works
+
+1. **Scrapes** fresh data from duome.eu using headless Firefox
+2. **Processes** lesson data with professional-grade algorithms
+3. **Calculates** progress toward your completion goal
+4. **Notifies** you with smart, time-appropriate messages
+5. **Updates** your progress dashboard automatically
 
 ## ⚙️ Configuration
 
-**Key Parameters** (`config/app_config.py`):
+Edit `config/app_config.py` to customize:
+
 ```python
-USERNAME = "jonamar"
-TOTAL_COURSE_UNITS = 272
-GOAL_DAYS = 548  # 18 months
-DAILY_GOAL_LESSONS = 12  # Hardcoded daily target
-TRACKING_START_DATE = "2025-06-23"
+# Your Duolingo username
+USERNAME = "your_username"
+
+# Course configuration
+TOTAL_COURSE_UNITS = 272  # Adjust for your target language
+GOAL_DAYS = 548          # 18 months = 548 days
+DAILY_GOAL_LESSONS = 12  # Target lessons per day
+
+# Notification settings
+PUSHOVER_ENABLED = True
+MORNING_START_HOUR = 6
+EVENING_END_HOUR = 23
 ```
 
-**Automated Schedule**: Every 30 minutes (6am-midnight) via macOS launchd
+## 📈 Current Status
 
-## 🏗️ Architecture
+- **Architecture**: Complete with zero technical debt
+- **Automation**: Fully functional cross-platform setup
+- **Data Model**: Tracking-only approach (clean, reliable)
+- **Notifications**: Time-based intelligent messaging
+- **Goal Tracking**: Dynamic burn rate analysis
+
+## 🏗️ Project Structure
 
 ```
-📁 owlgorithm/
-├── 🔧 config/app_config.py          # Single source of truth
-├── 📊 src/core/metrics_calculator.py # Centralized calculations  
-├── 🛠️  src/utils/                    # Shared utilities
-├── 🕷️  src/scrapers/                 # Headless browser automation
-├── 📱 src/notifiers/                # Push notifications
-└── 📈 progress-dashboard.md         # Auto-updated progress
+owlgorithm/
+├── 📁 config/           # Configuration files
+├── 📁 docs/             # All documentation
+├── 📁 scripts/          # Setup and automation scripts
+├── 📁 src/              # Source code
+│   ├── 📁 core/         # Business logic
+│   ├── 📁 scrapers/     # Web scraping
+│   ├── 📁 notifiers/    # Push notifications
+│   └── 📁 utils/        # Shared utilities
+├── 📁 tests/            # Test suite
+├── 📄 README.md         # This file
+├── 📄 requirements.txt  # Python dependencies
+└── 📄 VERSION           # Current version
 ```
 
-**Core Features:**
-- **Headless scraping**: Firefox automation with error handling
-- **State management**: Atomic operations with backup/recovery
-- **Time-based notifications**: Morning goals, evening progress
-- **Data validation**: Comprehensive error detection and handling
+## 📚 Documentation
 
-## 🎉 Project Status: COMPLETE
+- **[📋 Documentation Index](docs/README.md)** - Overview of all documentation
+- **[🚀 Setup Guide](docs/setup.md)** - Complete installation and configuration
+- **[🚨 Core Business Logic](docs/core-business-logic.md)** - System rules and constraints
+- **[🔧 Developer Guide](docs/claude.md)** - Development commands and workflow
+- **[📝 Changelog](docs/changelog.md)** - Project history and version changes
 
-**✅ All planned work finished:**
-- Phase 1: Fixed notification daily goal display
-- Epic 1: Clean historical data model
-- Epic 2: Unified calculation logic
-- Epic 3: 18-month goal tracking with burn rate analysis
-- Epic 5: Architecture consolidation
-- Epic 6: Final deduplication (all 46 duplications eliminated)
+## 🤝 Contributing
 
-**System provides complete automated tracking with zero technical debt.**
+1. **Read First**: [Core Business Logic](docs/core-business-logic.md) contains immutable rules
+2. **Follow Conventions**: Use [Conventional Commits](https://www.conventionalcommits.org/)
+3. **Update Version**: Bump version in `VERSION` file for significant changes
+4. **Test Changes**: Run `python scripts/daily_update.py` to verify functionality
+
+### Commit Message Format
+```bash
+# Examples
+feat: add ntfy notification backend support
+fix: improve Firefox automation reliability  
+docs: update setup guide with troubleshooting
+chore: bump dependencies to latest versions
+```
+
+## 🎯 Philosophy
+
+**Data-Driven Learning**: Objective progress tracking reveals patterns that intuition might miss.
+
+**Automation First**: Set it and forget it. Consistency beats perfection.
+
+**Privacy & Control**: Your data stays yours. No cloud dependencies, no accounts required.
+
+**Gentle Motivation**: Facts over guilt. Actionable insights, not judgmental pressure.
 
 ## 📜 License
 
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
-This permissive license allows commercial use, modification, and distribution while providing patent protection and legal clarity for both individual and enterprise adoption.
-
-## 🎯 Philosophy & Approach
-
-### Data-Driven Learning
-Owlgorithm believes in **objective progress tracking** over subjective feelings. Real data reveals patterns that intuition might miss, helping you optimize your learning pace and identify what actually works.
-
-### Automation First
-**Set it and forget it.** Manual tracking fails because life gets busy. Automation ensures consistency and removes the burden of remembering to check your progress.
-
-### Simplicity Over Features
-**Do one thing exceptionally well.** Rather than building a complex dashboard with dozens of features, we focus on accurate tracking and smart notifications that actually help.
-
-### Privacy & Control
-**Your data stays yours.** Everything runs locally on your machine. No cloud dependencies, no data sharing, no accounts required. You own and control every piece of information.
-
-### Gentle Motivation
-**Facts over guilt.** Our notifications provide actionable insights and concrete targets, not judgmental pressure or meaningless streaks.
-
-## 🚨 For Developers
-
-**⚠️ CRITICAL**: Read [CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md) before making changes.
-
-**Essential Rules**:
-- ALL XP sessions count as lessons (no exceptions)
-- Only raw modal data from duome.eu is trusted
-- Tracking-only data model (excludes historical pre-2025-06-23)
-- Hardcoded daily goal prevents calculation bugs
-
-### 📝 Commit Message Guidelines
-
-This project uses **Conventional Commits** for clear history and automatic changelog generation:
-
-```bash
-# Format: <type>(<scope>): <description>
-# Examples:
-feat: add ntfy notification backend support
-fix: improve Firefox automation reliability  
-docs: update setup guide with new examples
-chore: bump dependencies to latest versions
-test: add unit tests for metrics calculator
-refactor: simplify notification logic
-```
-
-**Commit Types**:
-- `feat`: New features
-- `fix`: Bug fixes  
-- `docs`: Documentation changes
-- `chore`: Maintenance tasks
-- `test`: Adding/updating tests
-- `refactor`: Code improvements without feature changes
-- `perf`: Performance improvements
-- `ci`: CI/CD changes
-
-**Why This Matters**:
-- 🤖 Automatic changelog generation
-- 📊 Clear project history
-- 🏷️ Semantic versioning automation
-- 🤝 Better collaboration
-
-## 📚 Documentation
-
-- **[CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md)**: Immutable business rules
-- **[CLAUDE.md](CLAUDE.md)**: Development commands and project status
-- **[plan.md](plan.md)**: Optional future enhancements
-
 ---
 
-*🎯 Goal: Complete 272 French units in 548 days using fully automated progress tracking.*
+*🎯 Complete your language learning goals with automated progress tracking and smart analytics.*

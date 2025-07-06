@@ -663,7 +663,7 @@ def calculate_recent_lessons_per_unit(sessions):
     """
     Calculate lessons per unit using Algorithm 1: "First Mention = Unit Start" with Sub-unit Folding.
     
-    CRITICAL CONSTRAINTS (see CLAUDE.md Algorithm 1 Specifications):
+    CRITICAL CONSTRAINTS (see docs/claude.md Algorithm 1 Specifications):
     - Hard-coded start date: 2025-06-19 (Nightmare unit start - first complete unit)
     - Exclude incomplete units: On Sale (no reliable start), current active unit
     - Target validation: Requests = 34 lessons, Grooming+Reflexives = 39 lessons
