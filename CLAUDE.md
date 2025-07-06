@@ -6,6 +6,60 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Owlgorithm is a Python-based Duolingo progress tracker that scrapes data from duome.eu to provide accurate lesson tracking and progress analytics. It features automated notifications, detailed statistics computation, and scheduled tracking via cron jobs.
 
+## Development Guidelines
+
+### 📝 Conventional Commits
+
+This project uses Conventional Commits for clear history and automatic changelog generation:
+
+```bash
+# Format: <type>(<scope>): <description>
+
+# Examples:
+feat: add cross-platform notification support
+feat(notifiers): implement ntfy backend
+fix: resolve Firefox automation timeout issues  
+fix(scraper): handle missing session data gracefully
+docs: update README with philosophy section
+docs(setup): add troubleshooting guide
+chore: update dependencies to latest versions
+chore(config): migrate to new template format
+test: add unit tests for metrics calculator
+test(integration): validate scraper error handling
+refactor: simplify notification message logic
+refactor(core): extract calculation utilities
+perf: optimize data processing pipeline
+ci: add automated testing workflow
+```
+
+**Commit Types:**
+- `feat`: New features or enhancements
+- `fix`: Bug fixes and error corrections
+- `docs`: Documentation updates
+- `chore`: Maintenance, dependencies, config
+- `test`: Adding or updating tests
+- `refactor`: Code improvements without behavior changes
+- `perf`: Performance optimizations
+- `ci`: CI/CD pipeline changes
+
+**Scopes (optional):**
+- `core`: Core tracking logic
+- `scrapers`: Web scraping functionality  
+- `notifiers`: Notification systems
+- `config`: Configuration management
+- `setup`: Setup and installation
+- `docs`: Documentation files
+
+### 🏷️ Version Management
+
+```bash
+# Update version after significant changes
+echo "1.1.0" > VERSION
+
+# Update CHANGELOG.md with new features
+# Follow semantic versioning: MAJOR.MINOR.PATCH
+```
+
 ## Key Commands
 
 ### Setup & Environment

@@ -1,0 +1,151 @@
+# Owlgorithm Development Rules
+
+## 📝 Conventional Commits (REQUIRED)
+
+This project uses Conventional Commits for clear history and automatic changelog generation.
+
+### Commit Message Format:
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Required Types:
+- `feat`: New features or enhancements
+- `fix`: Bug fixes and error corrections  
+- `docs`: Documentation updates
+- `chore`: Maintenance, dependencies, configuration
+- `test`: Adding or updating tests
+- `refactor`: Code improvements without behavior changes
+- `perf`: Performance optimizations
+- `ci`: CI/CD pipeline changes
+
+### Optional Scopes:
+- `core`: Core tracking logic (`src/core/`)
+- `scrapers`: Web scraping functionality (`src/scrapers/`)
+- `notifiers`: Notification systems (`src/notifiers/`)
+- `config`: Configuration management (`config/`)
+- `setup`: Setup and installation (`scripts/setup*`)
+- `docs`: Documentation files
+
+### Examples:
+```bash
+feat: add ntfy notification backend support
+feat(notifiers): implement email notification fallback
+fix: resolve Firefox automation timeout issues
+fix(scraper): handle missing session data gracefully
+docs: update README with troubleshooting section
+docs(setup): add cross-platform installation guide
+chore: bump selenium to latest version
+chore(config): migrate to new template format
+test: add unit tests for metrics calculator
+refactor(core): extract calculation utilities to separate module
+perf: optimize data processing pipeline
+```
+
+## 🚨 Critical Business Rules (READ FIRST)
+
+Before making ANY changes, read `CORE_BUSINESS_LOGIC.md`. These rules are immutable:
+
+- **ALL XP sessions count as lessons** (no exceptions)
+- **Only raw modal data from duome.eu is trusted**
+- **Tracking-only data model** (excludes historical pre-2025-06-23)
+- **Hardcoded daily goal prevents calculation bugs**
+
+## 🏗️ Architecture Guidelines
+
+### File Organization:
+- `src/core/`: Business logic and calculations
+- `src/scrapers/`: Web scraping with Selenium
+- `src/notifiers/`: Push notification systems
+- `src/utils/`: Shared utilities and helpers
+- `config/`: Configuration templates and user settings
+- `scripts/`: Setup, automation, and maintenance scripts
+
+### Code Quality:
+- Keep functions focused and single-purpose
+- Use descriptive variable names
+- Add docstrings to all public functions
+- Prefer explicit imports over wildcards
+- Test changes with `python scripts/daily_update.py`
+
+### Testing Requirements:
+- Test any scraper changes with `--validate-headless`
+- Verify notifications work before committing
+- Run full E2E test after architecture changes
+- Check automation works: `python scripts/setup_cron.py status`
+
+## 🔧 Configuration Management
+
+### Template Pattern (DO NOT BREAK):
+```
+config/app_config.example.py  # Template (committed)
+config/app_config.py         # User copy (gitignored)
+```
+
+- Never commit personal `app_config.py`
+- Always update `app_config.example.py` for new fields
+- Preserve backward compatibility in config schema
+- Document config changes in CHANGELOG.md
+
+## 📦 Dependencies
+
+### Preferred Approach:
+- Minimal dependencies (avoid bloat)
+- Prefer stdlib when possible
+- Pin major versions in `requirements.txt`
+- Test new dependencies on multiple platforms
+
+### Core Dependencies (DO NOT REMOVE):
+- `selenium`: Web automation (Firefox only)
+- `requests`: HTTP client for notifications
+- `beautifulsoup4`: HTML parsing
+- `pandas`: Data manipulation (if needed)
+
+## 🚀 Release Process
+
+### Version Bumping:
+1. Update `VERSION` file with semantic versioning
+2. Update `CHANGELOG.md` with new changes
+3. Commit with: `chore: bump version to X.Y.Z`
+4. Test full workflow before tagging
+
+### Semantic Versioning:
+- **MAJOR**: Breaking changes (config schema, core business logic)
+- **MINOR**: New features (notification backends, setup improvements)  
+- **PATCH**: Bug fixes, documentation, minor improvements
+
+## 💡 Best Practices
+
+### Commit Frequency:
+- Small, focused commits are preferred
+- One logical change per commit
+- Commit working increments, not broken code
+- Use meaningful commit messages (follow conventional commits)
+
+### Error Handling:
+- Always handle browser automation failures gracefully
+- Log errors with context for debugging
+- Provide helpful error messages to users
+- Never crash on missing optional dependencies
+
+### Performance:
+- Profile scraper performance changes
+- Avoid unnecessary data processing
+- Cache expensive operations when safe
+- Respect duome.eu rate limits
+
+## 🔍 Code Review Checklist
+
+Before committing, verify:
+- [ ] Conventional commit message format
+- [ ] No personal data in committed files
+- [ ] Config template updated if schema changed
+- [ ] Documentation updated for user-facing changes
+- [ ] Tests pass (manual E2E test minimum)
+- [ ] Error handling for new failure modes
+- [ ] Backward compatibility maintained
+- [ ] Performance impact considered 

@@ -118,6 +118,37 @@ Owlgorithm believes in **objective progress tracking** over subjective feelings.
 - Tracking-only data model (excludes historical pre-2025-06-23)
 - Hardcoded daily goal prevents calculation bugs
 
+### 📝 Commit Message Guidelines
+
+This project uses **Conventional Commits** for clear history and automatic changelog generation:
+
+```bash
+# Format: <type>(<scope>): <description>
+# Examples:
+feat: add ntfy notification backend support
+fix: improve Firefox automation reliability  
+docs: update setup guide with new examples
+chore: bump dependencies to latest versions
+test: add unit tests for metrics calculator
+refactor: simplify notification logic
+```
+
+**Commit Types**:
+- `feat`: New features
+- `fix`: Bug fixes  
+- `docs`: Documentation changes
+- `chore`: Maintenance tasks
+- `test`: Adding/updating tests
+- `refactor`: Code improvements without feature changes
+- `perf`: Performance improvements
+- `ci`: CI/CD changes
+
+**Why This Matters**:
+- 🤖 Automatic changelog generation
+- 📊 Clear project history
+- 🏷️ Semantic versioning automation
+- 🤝 Better collaboration
+
 ## 📚 Documentation
 
 - **[CORE_BUSINESS_LOGIC.md](CORE_BUSINESS_LOGIC.md)**: Immutable business rules
