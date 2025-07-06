@@ -30,15 +30,22 @@ venv/
 env/
 ENV/
 
-# Data Files
-*.csv
-*.json
-*.log
+# Personal Data Files (excluded from public release)
 personal-math.md
-duolingo_data/
+tracker_state.json
+data/
+logs/
 
 # Pushover credentials (keep secure)
-pushover_config.json
+config/pushover_config.json
+
+# Personal configuration (actual config - template is public)
+config/app_config.py
+
+# Scraped data and logs
+duolingo_data/
+*.csv
+*.log
 
 # IDE
 .vscode/
