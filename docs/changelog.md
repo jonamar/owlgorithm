@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2025-07-06
+
+### Added
+- **Enhanced notification system** with dynamic progress insights
+  - Dynamic required pace calculation (e.g., "10.4 lessons/day" instead of hardcoded 12)
+  - Weekly performance averages from actual session data 
+  - Projected finish dates with early/late context (e.g., "Aug 09, 2026 (4.9 mo early)")
+  - Clean 3-line notification format for quick progress scanning
+
+### Changed
+- **Notification format** transformed from static to dynamic insights
+  - Before: "Today: 8/12 lessons (67%)\nTotal Sessions: 181\nTime: 19:22"
+  - After: "11 / 10.4 lessons (105%)\nweek avg: 10.7 per day\nfinish: Aug 09, 2026 (4.9 mo early)"
+- **Single notification system** - removed legacy fallback code for cleaner architecture
+- **Test suite updated** to match current intended functionality
+
+### Improved
+- **Code quality**: 19% reduction in notification module (70→57 lines)
+- **Error handling**: Specific exception handling replacing bare except clauses
+- **Testability**: Extracted pure formatter function (`_format_notification_message()`) for better unit testing
+- **Robustness**: Consolidated duplicate functions and cleaned up imports
+
+### Fixed
+- **Weekly average calculation** now properly receives `json_data` parameter in `daily_tracker.py`
+- **State reconciliation** in `get_tracked_unit_progress()` handles None state_data gracefully
+- **Parameter passing** - eliminated unused parameters and improved function signatures
+
+### Technical
+- Consolidated `send_enhanced_notification()` and `send_simple_notification()` into single clean implementation
+- Added robust date formatting with `(ValueError, TypeError)` exception handling
+- Maintained backward compatibility while eliminating code bloat
+- All 26 affected tests updated and passing
+
 ## [2.2.0] - 2025-07-06
 
 ### Added
