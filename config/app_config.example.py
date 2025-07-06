@@ -44,7 +44,7 @@ EVENING_END_HOUR: int = 21              # Evening end (9 PM)
 TOTAL_UNITS_IN_COURSE: int = TRACKABLE_TOTAL_UNITS  # For backward compatibility
 
 # --- Primary file paths ---
-MARKDOWN_FILE: str = "personal-math.md"  # Your progress report file
+MARKDOWN_FILE: str = "progress-dashboard.md"  # Your progress report file
 STATE_FILE: str = "tracker_state.json"  # Tracker state file
 
 # --- Derived directories (relative to project root) ---

@@ -2,7 +2,7 @@
 """
 Daily Duolingo Tracker
 Orchestrates the scraping of duome.eu, parsing the data, and updating
-the personal-math.md file with the latest progress and projections.
+the progress-dashboard.md file with the latest progress and projections.
 """
 
 import os
@@ -350,7 +350,7 @@ def calculate_performance_metrics(json_data):
     }
 
 def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None, state_data=None):
-    """Reads, updates, and writes the personal-math.md file.
+    """Reads, updates, and writes the progress-dashboard.md file.
     
     Args:
         newly_completed_count: Number of newly completed units

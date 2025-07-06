@@ -6,13 +6,34 @@ Extracted from daily_tracker.py for better organization and testability.
 """
 
 import re
+import os
 from datetime import datetime
 from config import app_config as cfg
 from .metrics_calculator import calculate_performance_metrics, get_tracked_unit_progress
 
 
+def _check_and_migrate_legacy_markdown():
+    """
+    Check for legacy personal-math.md file and migrate to progress-dashboard.md.
+    
+    This provides backward compatibility for users who have existing personal-math.md files.
+    """
+    legacy_file = "personal-math.md"
+    current_file = cfg.MARKDOWN_FILE
+    
+    # Only migrate if legacy file exists and current file doesn't
+    if os.path.exists(legacy_file) and not os.path.exists(current_file):
+        print(f"🔄 Migrating {legacy_file} to {current_file} for backward compatibility...")
+        try:
+            os.rename(legacy_file, current_file)
+            print(f"✅ Successfully migrated {legacy_file} to {current_file}")
+        except OSError as e:
+            print(f"❌ Failed to migrate {legacy_file}: {e}")
+            # Continue execution - the file will be created fresh if needed
+
+
 def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None, state_data=None):
-    """Reads, updates, and writes the personal-math.md file.
+    """Reads, updates, and writes the progress-dashboard.md file.
     
     Args:
         newly_completed_count: Number of newly completed units
@@ -23,6 +44,9 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
         json_data: Optional session data for calculating performance metrics
         state_data: Optional state data for calculating goal progress
     """
+    # Check for legacy file migration first
+    _check_and_migrate_legacy_markdown()
+    
     print(f"📈 Updating stats...")
     
     # --- Read existing values ---

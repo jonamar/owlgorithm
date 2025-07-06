@@ -2,7 +2,7 @@
 """
 Daily Duolingo Tracker
 Orchestrates the scraping of duome.eu, parsing the data, and updating
-the personal-math.md file with the latest progress and projections.
+the progress-dashboard.md file with the latest progress and projections.
 """
 
 import os

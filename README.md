@@ -64,7 +64,7 @@ TRACKING_START_DATE = "2025-06-23"
 ├── 🛠️  src/utils/                    # Shared utilities
 ├── 🕷️  src/scrapers/                 # Headless browser automation
 ├── 📱 src/notifiers/                # Push notifications
-└── 📈 personal-math.md              # Auto-updated progress
+└── 📈 progress-dashboard.md         # Auto-updated progress
 ```
 
 **Core Features:**

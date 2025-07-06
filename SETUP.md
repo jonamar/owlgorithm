@@ -84,7 +84,7 @@ python scripts/daily_update.py
 ```
 
 If successful, you'll see:
-- A new `personal-math.md` file with your progress
+- A new `progress-dashboard.md` file with your progress
 - Data files in the `data/` directory
 - Logs in the `logs/` directory
 
@@ -254,7 +254,7 @@ tail -f logs/launchd-*.log
 
 ## 📊 Understanding Your Data
 
-### Progress Report (`personal-math.md`)
+### Progress Report (`progress-dashboard.md`)
 - **Current Progress**: Units completed, lessons done today
 - **Goal Analysis**: Days remaining, required pace
 - **Projections**: Estimated completion date

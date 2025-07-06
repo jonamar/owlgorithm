@@ -49,7 +49,7 @@
 │   └── validation.py               # Validation utilities
 ├── 🕷️  src/scrapers/                 # Web scraping with unified configuration
 ├── 📱 src/notifiers/                # Push notifications
-└── 📈 personal-math.md              # Auto-updated progress tracking
+└── 📈 progress-dashboard.md         # Auto-updated progress tracking
 ```
 
 ### **Data Flow**

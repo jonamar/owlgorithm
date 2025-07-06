@@ -31,7 +31,7 @@ env/
 ENV/
 
 # Personal Data Files (excluded from public release)
-personal-math.md
+progress-dashboard.md
 tracker_state.json
 tracker_state_backup_*.json
 data/

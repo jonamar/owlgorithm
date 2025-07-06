@@ -125,7 +125,7 @@ launchctl load ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
 ### Data Flow
 1. **Scraper** auto-refreshes duome.eu and extracts session data
 2. **Core tracker** computes lesson metrics (core vs practice sessions)
-3. **Markdown updater** updates `personal-math.md` with progress stats
+3. **Markdown updater** updates `progress-dashboard.md` with progress stats
 4. **Notifier** sends time-appropriate notifications (morning goals, evening progress, etc.)
 
 ### Key Features
@@ -146,7 +146,7 @@ launchctl load ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
 
 ### Data Files
 - `data/duome_raw_USERNAME_TIMESTAMP.json`: Raw scraped session data
-- `personal-math.md`: Markdown progress report (auto-updated)
+- `progress-dashboard.md`: Markdown progress report (auto-updated)
 - `tracker_state.json`: Persistent state for daily tracking
 - `logs/`: Execution logs and debugging output
 
