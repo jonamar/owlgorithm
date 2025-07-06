@@ -93,6 +93,138 @@ class AutomationSetup:
         """Check if crontab already has Owlgorithm entries."""
         return 'daily_update.py' in crontab_content or 'owlgorithm' in crontab_content.lower()
     
+    def show_platform_instructions(self):
+        """Show platform-specific setup instructions and requirements."""
+        print(f"🔧 Platform-Specific Setup Instructions")
+        print(f"{'='*60}")
+        print(f"Detected Platform: {self._get_platform_name()}")
+        print()
+        
+        if self.platform == 'darwin':  # macOS
+            print("📱 macOS Setup:")
+            print("  • Cron is available by default")
+            print("  • No additional setup required")
+            print("  • System will handle scheduling automatically")
+            print("  • Use 'crontab -l' to view active schedules")
+            print()
+            print("💡 macOS Tips:")
+            print("  • Cron runs in background even when not logged in")
+            print("  • Check logs in ~/Library/Logs/ if issues occur")
+            print("  • Terminal may need Full Disk Access for some operations")
+            
+        elif self.platform == 'linux' and not self.is_wsl:  # Native Linux
+            print("🐧 Linux Setup:")
+            print("  • Cron should be available by default")
+            print("  • If not installed: sudo apt-get install cron (Ubuntu/Debian)")
+            print("  • Or: sudo yum install cronie (CentOS/RHEL)")
+            print("  • Service management: sudo systemctl start crond")
+            print()
+            print("💡 Linux Tips:")
+            print("  • Check if cron service is running: systemctl status crond")
+            print("  • View system logs: journalctl -u crond")
+            print("  • User crontab doesn't require sudo")
+            
+        elif self.is_wsl:  # Windows Subsystem for Linux
+            print("🪟 WSL (Windows Subsystem for Linux) Setup:")
+            print("  • Cron is available but may need manual start")
+            print("  • Start cron service: sudo service cron start")
+            print("  • Auto-start: Add to ~/.bashrc or ~/.zshrc:")
+            print("    sudo service cron start 2>/dev/null")
+            print()
+            print("💡 WSL Tips:")
+            print("  • Cron only runs while WSL is active")
+            print("  • Consider Windows Task Scheduler for always-on automation")
+            print("  • Test with: sudo service cron status")
+            
+        else:
+            print("❓ Unknown Platform:")
+            print("  • Manual setup may be required")
+            print("  • Check if cron/crontab is available")
+            print("  • Consult your system documentation")
+            
+        print()
+        print("🔍 Common Commands:")
+        print("  • View current crontab: crontab -l")
+        print("  • Edit crontab manually: crontab -e")
+        print("  • Test cron works: echo '* * * * * echo \"test\" >> /tmp/crontest' | crontab -")
+        print("  • Remove test: crontab -r")
+        print()
+    
+    def check_system_requirements(self):
+        """Check system requirements and provide detailed status."""
+        print(f"🔍 System Requirements Check")
+        print(f"{'='*50}")
+        
+        requirements = []
+        
+        # Check Python
+        python_version = sys.version_info
+        python_ok = python_version >= (3, 8)
+        requirements.append({
+            'name': 'Python Version',
+            'status': '✅ OK' if python_ok else '❌ FAIL',
+            'details': f"{python_version.major}.{python_version.minor}.{python_version.micro}",
+            'required': '>= 3.8'
+        })
+        
+        # Check cron availability
+        cron_ok = self.cron_available
+        requirements.append({
+            'name': 'Cron System',
+            'status': '✅ OK' if cron_ok else '❌ MISSING',
+            'details': 'Available' if cron_ok else 'Not found',
+            'required': 'crontab command'
+        })
+        
+        # Check project files
+        entry_exists = self.entry_script.exists()
+        requirements.append({
+            'name': 'Entry Script',
+            'status': '✅ OK' if entry_exists else '❌ MISSING',
+            'details': str(self.entry_script),
+            'required': 'scripts/daily_update.py'
+        })
+        
+        # Check config file
+        config_exists = (self.project_root / "config" / "app_config.py").exists()
+        requirements.append({
+            'name': 'Configuration',
+            'status': '✅ OK' if config_exists else '❌ MISSING',
+            'details': 'config/app_config.py',
+            'required': 'Personal config file'
+        })
+        
+        # Check log directory
+        log_dir = self.project_root / cfg.LOG_DIR
+        log_dir_exists = log_dir.exists()
+        requirements.append({
+            'name': 'Log Directory',
+            'status': '✅ OK' if log_dir_exists else '⚠️ MISSING',
+            'details': str(log_dir),
+            'required': 'Will be created automatically'
+        })
+        
+        # Display results
+        for req in requirements:
+            print(f"  {req['name']:<20} {req['status']:<10} {req['details']}")
+            if req['status'].startswith('❌'):
+                print(f"    ↳ Required: {req['required']}")
+        
+        print()
+        
+        # Overall status
+        critical_fails = [r for r in requirements if r['status'].startswith('❌') and 'MISSING' in r['status']]
+        if critical_fails:
+            print("❌ Setup Requirements Not Met:")
+            for fail in critical_fails:
+                print(f"  • {fail['name']}: {fail['required']}")
+            print()
+            return False
+        else:
+            print("✅ All Requirements Met - Ready for automation setup!")
+            print()
+            return True
+    
     def show_status(self):
         """Show current automation status."""
         print(f"🔍 Automation Setup Status")
@@ -259,10 +391,12 @@ Examples:
   python scripts/setup_cron.py setup --force   # Force setup (overwrite existing)
   python scripts/setup_cron.py remove          # Remove automation
   python scripts/setup_cron.py test            # Test automation manually
+  python scripts/setup_cron.py check           # Check system requirements
+  python scripts/setup_cron.py help            # Show platform-specific instructions
         """
     )
     
-    parser.add_argument('action', choices=['status', 'setup', 'remove', 'test'],
+    parser.add_argument('action', choices=['status', 'setup', 'remove', 'test', 'check', 'help'],
                        help='Action to perform')
     parser.add_argument('--force', action='store_true',
                        help='Force setup even if automation already exists')
@@ -284,6 +418,11 @@ Examples:
     elif args.action == 'test':
         success = automation.test_automation()
         sys.exit(0 if success else 1)
+    elif args.action == 'check':
+        success = automation.check_system_requirements()
+        sys.exit(0 if success else 1)
+    elif args.action == 'help':
+        automation.show_platform_instructions()
 
 
 if __name__ == '__main__':
