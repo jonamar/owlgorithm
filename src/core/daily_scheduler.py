@@ -237,35 +237,18 @@ class DailyDuolingoTracker:
         self.logger.info("Daily collection completed successfully")
         return True
 
-def setup_cron_job(username, script_path=None):
-    """Helper to set up a cron job for daily collection"""
-    if script_path is None:
-        script_path = os.path.abspath(__file__)
-    
-    python_path = sys.executable
-    
-    cron_command = f"0 23 * * * {python_path} {script_path} --username {username}"
-    
-    print("🕐 To set up daily automatic collection, add this to your crontab:")
-    print(f"   (Run: crontab -e)")
-    print(f"   {cron_command}")
-    print()
-    print("This will run every day at 11 PM. Adjust the time as needed:")
-    print("   Format: minute hour day month weekday")
-    print("   Example: '0 9 * * *' for 9 AM daily")
+# Deprecated cron setup function removed
+# Cross-platform automation setup now handled by scripts/setup_cron.py
 
 def main():
     parser = argparse.ArgumentParser(description='Daily Duolingo progress tracker using duome.eu')
     parser.add_argument('--username', '-u', required=True, help='Duolingo username')
     parser.add_argument('--data-dir', '-d', default=cfg.DATA_DIR, help='Data directory')
     parser.add_argument('--email', '-e', help='Email for progress reports')
-    parser.add_argument('--setup-cron', action='store_true', help='Show cron setup instructions')
+    # Removed --setup-cron option (deprecated)
+    # Use scripts/setup_cron.py for cross-platform automation setup
     
     args = parser.parse_args()
-    
-    if args.setup_cron:
-        setup_cron_job(args.username)
-        return
     
     # Create tracker and run daily collection
     tracker = DailyDuolingoTracker(args.username, args.data_dir, args.email)
@@ -278,7 +261,7 @@ def main():
     print(f"📁 Data saved in: {args.data_dir}")
     print(f"🔍 View logs: {os.path.join(args.data_dir, f'duolingo_tracker_{args.username}.log')}")
     print("\n💡 Tips:")
-    print(f"   • Run with --setup-cron to see scheduling instructions")
+    print(f"   • Run scripts/setup_cron.py for automated scheduling setup")
     print(f"   • Check your data: ls -la {args.data_dir}/")
     print(f"   • View profile at: {build_duome_url(args.username)}")
 
