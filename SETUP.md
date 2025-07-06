@@ -91,25 +91,71 @@ BASE_LESSONS_PER_UNIT: int = 30
 
 ## 📅 Setting Up Automation
 
-### macOS (launchd)
+### Cross-Platform Automated Setup (Recommended)
+
+The easiest way to set up automation is using the built-in cross-platform utility:
+
 ```bash
-# Copy and edit the plist template
-cp automation/schedule.plist.example ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
+# Check your system is ready
+python scripts/setup_cron.py check
 
-# Edit the plist file with your project path
-nano ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
+# See platform-specific instructions
+python scripts/setup_cron.py help
 
-# Load the service
-launchctl load ~/Library/LaunchAgents/com.owlgorithm.duolingo.plist
+# Set up automation (interactive)
+python scripts/setup_cron.py setup
 ```
 
-### Linux/WSL (cron)
+This will automatically:
+- ✅ Detect your operating system (macOS, Linux, or WSL)
+- ✅ Generate the correct schedule (every 30 minutes, 6am-11:30pm + midnight)
+- ✅ Configure proper paths and logging
+- ✅ Handle existing automation safely
+
+### Platform-Specific Details
+
+**macOS:**
+- Uses cron (simpler than launchd)
+- Runs automatically in background
+- No additional setup required
+
+**Linux:**
+- Uses standard cron system
+- May need: `sudo systemctl start crond` (if not running)
+- Works on all major distributions
+
+**WSL (Windows):**
+- Uses cron with special WSL handling
+- May need: `sudo service cron start`
+- Consider Windows Task Scheduler for always-on automation
+
+### Manual Setup (Advanced)
+
+If you prefer manual setup or need customization:
+
 ```bash
-# Add to crontab (runs every 30 minutes, 6am-11:30pm)
+# View the generated cron entries
+python scripts/setup_cron.py status
+
+# Manual crontab edit
 crontab -e
 
-# Add this line:
-*/30 6-23 * * * cd /path/to/owlgorithm && ./duolingo_env/bin/python scripts/daily_update.py
+# Add these lines:
+*/30 6-23 * * * cd /path/to/owlgorithm && ./duolingo_env/bin/python scripts/daily_update.py >> logs/automation.log 2>&1
+0 0 * * * cd /path/to/owlgorithm && ./duolingo_env/bin/python scripts/daily_update.py >> logs/automation.log 2>&1
+```
+
+### Managing Automation
+
+```bash
+# Check current status
+python scripts/setup_cron.py status
+
+# Test automation manually
+python scripts/setup_cron.py test
+
+# Remove automation
+python scripts/setup_cron.py remove
 ```
 
 ## 🎯 Customization
