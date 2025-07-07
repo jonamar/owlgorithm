@@ -1,0 +1,162 @@
+{
+  "username": "testuser",
+  "scraped_at": "2025-07-06T20:00:26.745299",
+  "duome_reported_lessons": 156,
+  "computed_lesson_count": 75,
+  "computed_practice_count": 75,
+  "computed_total_sessions": 150,
+  "total_sessions": 150,
+  "sessions": [
+    {
+      "datetime": "2025-07-06T19:29:45",
+      "date": "2025-07-06",
+      "time": "19:29:45",
+      "xp": 88,
+      "session_type": "personalized_practice",
+      "unit": null,
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-06 19:29:45 · 88XP  ·personalized practice",
+      "assigned_unit": "Sports 2"
+    },
+    {
+      "datetime": "2025-07-06T19:10:21",
+      "date": "2025-07-06",
+      "time": "19:10:21",
+      "xp": 120,
+      "session_type": "unit_completion",
+      "unit": "Sports 2",
+      "is_lesson": true,
+      "is_unit_completion": true,
+      "raw_text": "2025-07-06 19:10:21 · 120XP  ·legendary / unit review",
+      "assigned_unit": "Sports 2"
+    },
+    {
+      "datetime": "2025-07-06T19:06:21",
+      "date": "2025-07-06",
+      "time": "19:06:21",
+      "xp": 60,
+      "session_type": "personalized_practice",
+      "unit": "Sports 2",
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-06 19:06:21 · 60XP  ·personalized practice",
+      "assigned_unit": "Sports 2"
+    },
+    {
+      "datetime": "2025-07-06T11:46:45",
+      "date": "2025-07-06",
+      "time": "11:46:45",
+      "xp": 60,
+      "session_type": "personalized_practice",
+      "unit": "Sports 2",
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-06 11:46:45 · 60XP  ·personalized practice",
+      "assigned_unit": "Sports 2"
+    },
+    {
+      "datetime": "2025-07-05T21:04:29",
+      "date": "2025-07-05",
+      "time": "21:04:29",
+      "xp": 66,
+      "session_type": "personalized_practice",
+      "unit": "Sports 2",
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-05 21:04:29 · 66XP  ·personalized practice",
+      "assigned_unit": "Sports 2"
+    },
+    {
+      "datetime": "2025-07-05T20:59:32",
+      "date": "2025-07-05",
+      "time": "20:59:32",
+      "xp": 68,
+      "session_type": "personalized_practice",
+      "unit": "Sports 2",
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-05 20:59:32 · 68XP  ·personalized practice",
+      "assigned_unit": "Sports 2"
+    },
+    {
+      "datetime": "2025-07-05T14:15:28",
+      "date": "2025-07-05",
+      "time": "14:15:28",
+      "xp": 30,
+      "session_type": "story_practice",
+      "unit": null,
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-05 14:15:28 · 30XP  ·story /practice",
+      "assigned_unit": "Sports 2"
+    },
+    {
+      "datetime": "2025-07-04T11:30:04",
+      "date": "2025-07-04",
+      "time": "11:30:04",
+      "xp": 60,
+      "session_type": "unit_completion",
+      "unit": "Grooming",
+      "is_lesson": true,
+      "is_unit_completion": true,
+      "raw_text": "2025-07-04 11:30:04 · 60XP  ·legendary / unit review",
+      "assigned_unit": "Grooming"
+    },
+    {
+      "datetime": "2025-07-04T11:26:16",
+      "date": "2025-07-04",
+      "time": "11:26:16",
+      "xp": 30,
+      "session_type": "personalized_practice",
+      "unit": "Grooming",
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-04 11:26:16 · 30XP  ·personalized practice",
+      "assigned_unit": "Grooming"
+    },
+    {
+      "datetime": "2025-07-03T16:21:30",
+      "date": "2025-07-03",
+      "time": "16:21:30",
+      "xp": 64,
+      "session_type": "personalized_practice",
+      "unit": "Requests",
+      "is_lesson": true,
+      "is_unit_completion": false,
+      "raw_text": "2025-07-03 16:21:30 · 64XP  ·personalized practice",
+      "assigned_unit": "Requests"
+    }
+  ],
+  "unit_stats": {
+    "Grooming": {
+      "total_combined_lessons": 25,
+      "total_lessons": 12,
+      "total_practice": 13,
+      "session_types": {
+        "unit_completion": 1,
+        "unit_lesson": 12,
+        "personalized_practice": 13
+      }
+    },
+    "Sports 2": {
+      "total_combined_lessons": 35,
+      "total_lessons": 15,
+      "total_practice": 20,
+      "session_types": {
+        "unit_completion": 1,
+        "unit_lesson": 15,
+        "personalized_practice": 20
+      }
+    },
+    "Requests": {
+      "total_combined_lessons": 15,
+      "total_lessons": 8,
+      "total_practice": 7,
+      "session_types": {
+        "unit_lesson": 8,
+        "personalized_practice": 7
+      }
+    }
+  }
+} 

@@ -285,3 +285,87 @@ Environment: Python 3.7+, virtual environment recommended
 - Write error messages and documentation for actual users, not developers
 
 **Remember: If you think you should version bump, apply the "Would I Update?" test first. Only suggest version bumps when users would genuinely benefit from updating.** 
+
+## Testing Requirements ⚠️ **MANDATORY FOR AI AGENTS**
+
+### **Critical Testing Rules - MUST FOLLOW**
+
+#### **When to Run Tests (MANDATORY):**
+- ✅ **ALWAYS** run `make test-smoke` before ANY commit affecting `src/` or `scripts/`
+- ✅ **ALWAYS** run tests before suggesting version bumps
+- ✅ **NEVER** commit if tests fail - fix issues first
+- ✅ **ALWAYS** report test results in commit messages
+
+#### **Test Commands (Quick Reference):**
+```bash
+# MANDATORY before commits to src/ or scripts/
+make test-smoke      # Essential smoke tests (< 30 seconds)
+
+# Optional additional testing
+make test-unit       # Unit tests only
+make test-all        # Complete test suite
+make coverage        # Tests with coverage report
+```
+
+#### **Failure Protocol:**
+1. **If `make test-smoke` fails**: DO NOT proceed with commit
+2. **Fix the issue first**, then re-run tests
+3. **If you can't fix it**: Stop and inform the user of the issue
+4. **Never commit broken code** - this protects the production pipeline
+
+#### **What Smoke Tests Validate:**
+- ✅ **Data processing pipeline**: Core calculations work correctly
+- ✅ **Notification content**: No junk values like "undefined", "calculating...", "NaN"
+- ✅ **Environment setup**: Critical imports and configuration access
+- ✅ **File operations**: Basic I/O and error handling
+- ✅ **Performance**: Tests complete in < 30 seconds
+
+#### **Integration with Development Workflow:**
+
+```bash
+# EXAMPLE: Proper AI agent workflow
+# 1. Make code changes
+git add src/core/metrics_calculator.py
+
+# 2. MANDATORY: Run smoke tests
+make test-smoke
+# ✅ Tests passed in 0.4s
+
+# 3. Only then commit
+git commit -m "fix(core): improve lesson counting accuracy
+
+- Fixed edge case in daily lesson calculation
+- Smoke tests: ✅ Passed (0.4s)
+- No breaking changes"
+
+# 4. Consider version bump if user-facing
+echo "2.0.1" > VERSION
+git add VERSION CHANGELOG.md
+git commit -m "chore: bump version to 2.0.1 - lesson counting fix"
+```
+
+#### **AI Agent Testing Checklist:**
+- [ ] Did I run `make test-smoke` before suggesting commits?
+- [ ] Did tests pass completely (no failures, no errors)?
+- [ ] Did I report test results in commit message?
+- [ ] If tests failed, did I fix issues before proceeding?
+- [ ] Am I testing ANY changes to `src/` or `scripts/` directories?
+
+#### **Why These Tests Matter:**
+- **Prevents silent failures**: User gets broken notifications with junk data
+- **Catches calculation errors**: Ensures lesson counts and progress are accurate  
+- **Validates integrations**: Components work together correctly
+- **Protects production**: Real automation depends on code quality
+- **Saves debugging time**: Issues caught before they reach users
+
+### **Test File Locations:**
+- `tests/integration/test_smoke.py` - Essential smoke tests
+- `tests/unit/` - Unit tests for individual components
+- `tests/fixtures/` - Realistic test data
+- `Makefile` - Unified test interface
+
+### **Remember:**
+🚨 **Testing is not optional** - it's mandatory for maintaining system reliability. Users depend on the automated daily notifications working correctly. A failed test means a potential silent failure in production.
+
+## Memories
+- Changelog is in /docs/changelog.md

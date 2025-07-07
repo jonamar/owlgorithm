@@ -1,0 +1,22 @@
+{
+  "processed_units": [
+    "Grooming",
+    "Sports 2",
+    "Requests"
+  ],
+  "total_completed_units": 3,
+  "total_lessons_completed": 75,
+  "last_scrape_date": "2025-07-06",
+  "last_update_timestamp": "2025-07-06T20:00:26.745299",
+  "computed_total_sessions": 150,
+  "computed_lesson_count": 75,
+  "computed_practice_count": 75,
+  "daily_lessons_completed": 8,
+  "daily_goal_lessons": 12,
+  "last_daily_reset": "2025-07-06",
+  "metadata": {
+    "created_at": "2025-06-16T20:12:31.076801",
+    "migration_history": []
+  },
+  "schema_version": "1.1"
+} 
