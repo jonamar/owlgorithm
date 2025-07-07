@@ -6,35 +6,17 @@ This guide will help you set up your own Duolingo progress tracker in under 10 m
 
 - Python 3.8+ installed on your system
 - Firefox browser (for web scraping)
-- **geckodriver** (Firefox WebDriver)
 - A Duolingo account with some progress
 - Optional: Pushover account for notifications
 
-### Installing geckodriver
+### Browser Requirements
 
-**macOS (with Homebrew):**
-```bash
-brew install geckodriver
-```
+**Firefox Installation:**
+- **macOS**: [Download Firefox](https://www.mozilla.org/firefox/) or `brew install firefox`
+- **Linux**: `sudo apt install firefox` or `sudo yum install firefox`
+- **Windows**: [Download Firefox](https://www.mozilla.org/firefox/)
 
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt install firefox-geckodriver
-# or
-sudo apt install geckodriver
-```
-
-**Linux (CentOS/RHEL):**
-```bash
-sudo yum install geckodriver
-```
-
-**Manual Installation (all platforms):**
-1. Download from [GitHub releases](https://github.com/mozilla/geckodriver/releases)
-2. Extract and place in your PATH (e.g., `/usr/local/bin/`)
-3. Make executable: `chmod +x geckodriver`
-
-**Note:** The system will automatically fall back to downloading geckodriver if not found, but installing it system-wide is more reliable for automation.
+**Note:** geckodriver (Firefox WebDriver) is automatically downloaded and managed by the system - no manual installation required!
 
 ## 🚀 Quick Start
 
@@ -71,13 +53,19 @@ nano config/app_config.py  # or use your preferred editor
 - `VENV_PYTHON_PATH`: Update path to your project location
 - `TRACKING_START_DATE`: Today's date (YYYY-MM-DD format)
 
-### 5. Optional: Setup Notifications
+### 5. Run Setup Wizard
+```bash
+# Creates directories and validates dependencies
+python scripts/setup.py --all
+```
+
+### 6. Optional: Setup Notifications
 ```bash
 # Run the interactive Pushover setup
 python scripts/setup_pushover.py
 ```
 
-### 6. Test Your Setup
+### 7. Test Your Setup
 ```bash
 # Run a complete test
 python scripts/daily_update.py
@@ -213,15 +201,11 @@ Edit the notification messages in `src/notifiers/pushover_notifier.py`
 python src/scrapers/duome_raw_scraper.py --validate-headless --username YOUR_USERNAME
 ```
 
-**geckodriver not found:**
+**geckodriver issues:**
 ```bash
-# Install geckodriver (see Prerequisites section above)
-brew install geckodriver  # macOS
-sudo apt install geckodriver  # Linux
-
-# Verify installation
-which geckodriver
-geckodriver --version
+# geckodriver is automatically managed - no manual installation needed!
+# If you see geckodriver errors, try:
+python -c "from webdriver_manager.firefox import GeckoDriverManager; print('Auto-installing:', GeckoDriverManager().install())"
 ```
 
 **Automation hanging/zombie processes:**

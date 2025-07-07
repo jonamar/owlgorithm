@@ -14,39 +14,21 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8+ with pip
-- Firefox browser
-- [geckodriver](https://github.com/mozilla/geckodriver/releases) (for browser automation)
+**Prerequisites**: Python 3.8+, Firefox, geckodriver
 
-### Installation
 ```bash
-# 1. Clone and setup
 git clone https://github.com/yourusername/owlgorithm.git
 cd owlgorithm
-python -m venv duolingo_env
-source duolingo_env/bin/activate  # On Windows: duolingo_env\Scripts\activate
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Run setup wizard
-python scripts/setup.py --all
-
-# 4. Configure notifications (optional)
-python scripts/setup_pushover.py
-
-# 5. Test the system
-python scripts/daily_update.py
+python scripts/setup.py --all  # Interactive setup wizard
 ```
 
-### Automation Setup
-```bash
-# Set up automated tracking (every 30 minutes)
-python scripts/setup_cron.py setup
-```
+**📋 For complete setup instructions, see [Setup Guide](docs/setup.md)**
 
-That's it! Your system will now automatically track your progress and send notifications.
+The setup guide includes:
+- ✅ Platform-specific installation details
+- ✅ Course configuration examples  
+- ✅ Automation setup (cron/Task Scheduler)
+- ✅ Troubleshooting common issues
 
 ## 📊 How It Works
 
