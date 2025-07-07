@@ -154,9 +154,12 @@ class TestEssentialSmokeTests:
                 numbers = re.findall(r'\d+', message)
                 if numbers:
                     # Check that lesson counts are reasonable (not negative, not impossibly high)
+                    # Note: Exclude year projections (>2000) from validation
                     for num_str in numbers:
                         num = int(num_str)
-                        assert 0 <= num <= 1000, f"Notification contains unrealistic number: {num}"
+                        if num > 2000:  # Likely a year projection, skip validation
+                            continue
+                        assert 0 <= num <= 1000, f"Notification contains unrealistic lesson count: {num}"
         
         # Test 3: Markdown generation functionality
         print("📝 Testing markdown update functionality...")

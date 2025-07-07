@@ -151,7 +151,40 @@ Before making ANY changes, read `docs/core-business-logic.md`. These rules are i
 - Prefer explicit imports over wildcards
 - Test changes with `python scripts/daily_update.py`
 
-### Testing Requirements:
+### Testing Requirements ⚠️ **MANDATORY**:
+
+#### **AI Agent Testing Protocol (MUST FOLLOW):**
+- ✅ **ALWAYS** run `make test-smoke` before ANY commit to `src/` or `scripts/`
+- ✅ **NEVER** commit if tests fail - fix issues first
+- ✅ **ALWAYS** report test results in commit messages
+- ✅ Run tests before suggesting version bumps
+
+#### **Test Commands:**
+```bash
+make test-smoke      # MANDATORY - Essential smoke tests (< 30 seconds)
+make test-unit       # Unit tests only
+make test-all        # Complete test suite
+```
+
+#### **Commit Workflow Example:**
+```bash
+# 1. Make changes to src/ or scripts/
+# 2. MANDATORY: Run smoke tests
+make test-smoke
+# 3. If ✅ passed, proceed with commit including test results:
+git commit -m "fix(core): improve calculation accuracy
+
+- Fixed edge case in lesson counting
+- Smoke tests: ✅ Passed (0.4s)
+- No breaking changes"
+```
+
+#### **Failure Protocol:**
+- If `make test-smoke` fails → DO NOT commit
+- Fix the issue first, then re-run tests
+- Only proceed when tests pass completely
+
+#### **Additional Testing:**
 - Test any scraper changes with `--validate-headless`
 - Verify notifications work before committing
 - Run full E2E test after architecture changes
