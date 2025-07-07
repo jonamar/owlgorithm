@@ -35,26 +35,26 @@
 
 ### 80-20 Testing Strategy
 
-#### **Tier 1: Smoke Tests (< 30 seconds)**
-Essential validation that catches 80% of real-world failures:
+#### **Tier 1: Essential Smoke Tests (< 30 seconds)**
+Critical validation that catches 80% of real-world failures:
 
-1. **E2E Happy Path**: Complete daily update flow with fixture data
-2. **Notification Content Validation**: Verify notifications contain real data, not junk
-3. **Configuration Validation**: Ensure environment setup is correct
+1. **E2E Happy Path with Content Validation**: Complete daily update flow with fixture data AND verify notification content
+2. **Configuration Loading & Validation**: Prevent startup failures from config issues
+3. **Edge Case Data Processing**: Prevent calculation errors in core metrics
+4. **Basic Environment Validation**: Quick smoke test for critical dependencies
 
-#### **Tier 2: Integration Tests (< 2 minutes)**
+#### **Tier 2: Integration Tests (< 2 minutes)** *[Future Phase - Optional]*
 Comprehensive integration validation:
 
-4. **Scraper Failure Fallback**: Test graceful handling of browser automation failures
-5. **State Corruption Recovery**: Test recovery from corrupted state files
-6. **Cross-component Integration**: Verify data flows correctly between modules
+5. **Scraper Graceful Failure Handling**: Test graceful handling of browser automation failures (prevents silent automation failures)
+6. **State File Corruption Recovery**: Test recovery from corrupted state files (prevents data loss)
+7. **Cross-component Integration**: Verify data flows correctly between modules
 
-#### **Tier 3: E2E Validation (< 5 minutes)**
+#### **Tier 3: E2E Validation (< 5 minutes)** *[Future Phase - Optional]*
 Full system validation for critical changes:
 
-7. **Real Browser Automation**: Actual Firefox/geckodriver testing
-8. **Live Notification Delivery**: Real Pushover API testing
-9. **Performance Validation**: Ensure system performance under load
+8. **Real Browser Automation**: Actual Firefox/geckodriver testing
+9. **Live Notification Delivery**: Real Pushover API testing
 
 ## 📋 Requirements Specification
 
@@ -64,276 +64,272 @@ Full system validation for critical changes:
 - **Priority**: Critical
 - **Requirement**: Add testing requirements section with AI agent rules
 - **Acceptance Criteria**:
-  - Clear decision matrix for test level based on component changes
-  - Mandatory test commands for different scenarios
-  - Failure protocol definitions
+  - Simple decision matrix for when to run smoke tests
+  - Mandatory test commands before commits
+  - Clear failure protocol definitions
 
-#### **R1.2: Repository Rules Enhancement**
-- **Priority**: Critical  
-- **Requirement**: Extend existing repo-specific rules with testing gates
-- **Acceptance Criteria**:
-  - Pre-commit testing requirements (non-negotiable)
-  - Testing decision tree for different change types
-  - Test failure protocol with escalation steps
-
-#### **R1.3: Testing Workflow Documentation**
+#### **R1.2: Testing Guide Documentation**
 - **Priority**: High
-- **Requirement**: Create comprehensive `docs/testing-workflow.md`
+- **Requirement**: Create focused `docs/testing-guide.md`
 - **Acceptance Criteria**:
-  - Separate sections for AI agents and engineers
+  - Consolidated testing workflow for AI agents and engineers
   - Common failure scenarios mapped to specific tests
   - Test command reference with examples
+  - Production pipeline validation steps
 
 ### **R2: Test Infrastructure**
 
-#### **R2.1: Integration Test Suite**
+#### **R2.1: Basic Test Infrastructure (Phase 0)**
 - **Priority**: Critical
-- **Requirement**: Implement 5 core integration tests
+- **Requirement**: Create Makefile with existing test commands
 - **Acceptance Criteria**:
-  - All tests complete in < 2 minutes total
-  - Tests use realistic fixture data
+  - `make test-unit` (existing pytest commands)
+  - `make test-smoke` (new Tier 1 tests)
+  - `make test-all` (combined unit + smoke)
+  - Production pipeline compatibility validation
+
+#### **R2.2: Essential Smoke Tests (Phase 1)**
+- **Priority**: Critical
+- **Requirement**: Implement 4 core smoke tests only
+- **Acceptance Criteria**:
+  - All tests complete in < 30 seconds total
+  - Tests use realistic fixture data from existing production data
   - Tests validate actual user experience, not internal implementation
+  - Tests run against existing production pipeline without breaking it
+  - Tests prevent startup failures, calculation errors, and notification issues
 
-#### **R2.2: Test Fixtures and Helpers**
-- **Priority**: High
-- **Requirement**: Create reusable test infrastructure
-- **Acceptance Criteria**:
-  - Realistic session data fixtures
-  - Notification capture/validation helpers
-  - Environment setup validation utilities
-
-#### **R2.3: Make Commands Interface**
-- **Priority**: High
-- **Requirement**: Simple testing commands that hide complexity
-- **Acceptance Criteria**:
-  - `make test-smoke` (< 30 seconds)
-  - `make test-integration` (< 2 minutes)
-  - `make test-e2e` (< 5 minutes)
-  - `make test-all` (comprehensive)
-
-### **R3: AI Agent Integration**
-
-#### **R3.1: Context-Aware Testing**
-- **Priority**: Critical
-- **Requirement**: AI agents must run appropriate tests based on change context
-- **Acceptance Criteria**:
-  - Automatic test level determination based on modified components
-  - Clear validation steps before suggesting commits
-  - Test output captured and verified
-
-#### **R3.2: Testing Protocol Enforcement**
-- **Priority**: High
-- **Requirement**: AI agents cannot skip testing requirements
-- **Acceptance Criteria**:
-  - Mandatory testing checkpoints in AI decision flow
-  - Clear escalation when tests fail
-  - No version bumps without full test suite validation
-
-### **R4: Engineer Workflow Integration**
-
-#### **R4.1: Development Workflow Enhancement**
-- **Priority**: High
-- **Requirement**: Integrate testing into existing conventional commit workflow
-- **Acceptance Criteria**:
-  - Pre-commit testing requirements
-  - Testing validation in commit messages
-  - Version bump protocol with mandatory testing
-
-#### **R4.2: CONTRIBUTING.md Updates**
+#### **R2.3: Test Fixtures and Helpers**
 - **Priority**: Medium
-- **Requirement**: Add testing requirements to contributor guidelines
+- **Requirement**: Minimal test infrastructure for smoke tests
 - **Acceptance Criteria**:
-  - Development workflow with testing checkpoints
-  - Pull request checklist with testing requirements
-  - Clear examples of testing commands
+  - Realistic session data fixtures (derived from existing data/ files)
+  - Notification capture/validation helpers
+  - Basic environment validation utilities
 
-## 🔧 Implementation Plan
+### **R3: AI Agent Integration** *[Simplified Scope]*
 
-### **Phase 1: Core Infrastructure (Week 1)**
-- **Day 1-2**: Create integration test directory structure
-- **Day 3-4**: Implement Tier 1 smoke tests (3 tests)
-- **Day 5**: Create Makefile with basic test commands
-- **Deliverable**: Working smoke test suite
+#### **R3.1: AI Agent Testing Requirements**
+- **Priority**: High
+- **Requirement**: Clear, mandatory testing workflow for AI agents
+- **Acceptance Criteria**:
+  - **Trigger rule**: Run `make test-smoke` before ANY commit affecting `src/` or `scripts/`
+  - **CLAUDE.md + .cursorrules integration**: Add mandatory testing section to both AI agent instruction files
+  - **Commit validation**: AI agents must report test results before suggesting commits
+  - **Failure protocol**: Clear instructions when tests fail (don't commit, fix first)
 
-### **Phase 2: Integration Tests (Week 2)**
-- **Day 1-2**: Implement Tier 2 integration tests (3 tests)
-- **Day 3**: Create test fixtures and helpers
-- **Day 4**: Optimize test execution time
-- **Day 5**: Validate full integration test suite
-- **Deliverable**: Complete integration test coverage
+#### **R3.2: Production Pipeline Validation**
+- **Priority**: Critical
+- **Requirement**: Ensure tests don't break existing automation
+- **Acceptance Criteria**:
+  - Smoke tests run in isolation from production cron jobs
+  - No interference with existing daily_update.py automation
+  - Clear separation between test and production data
 
-### **Phase 3: Documentation Integration (Week 3)**
-- **Day 1**: Update CLAUDE.md with testing requirements
-- **Day 2**: Enhance repository rules with testing gates
-- **Day 3**: Create `docs/testing-workflow.md`
-- **Day 4**: Update CONTRIBUTING.md with testing workflow
-- **Day 5**: Create AI agent testing protocol
-- **Deliverable**: Complete documentation integration
+## 🔧 Implementation Plan *[Simplified & Incremental]*
 
-### **Phase 4: Workflow Integration (Week 4)**
-- **Day 1-2**: Implement context-aware testing for AI agents
-- **Day 3**: Create testing enforcement mechanisms
-- **Day 4**: Test complete workflow end-to-end
-- **Day 5**: Documentation review and refinement
-- **Deliverable**: Production-ready testing workflow
+### **Phase 0: Foundation (1 day)**
+- **Day 1**: Create basic Makefile with existing test commands
+- **Validation**: Ensure `make test-unit` works with current pytest setup
+- **Production Check**: Verify no interference with existing automation
+- **Deliverable**: Working Makefile foundation
 
-## 📁 File Structure
+### **Phase 1: Essential Smoke Tests (4 days)**
+- **Day 1**: Create test fixtures from existing production data (data/ directory)
+- **Day 2**: Implement combined E2E + content validation test
+- **Day 3**: Implement configuration loading & validation + edge case data processing tests
+- **Day 4**: Implement basic environment validation test
+- **Validation**: All 4 tests complete in < 30 seconds
+- **Production Check**: Tests run in isolation from production pipeline
+- **Deliverable**: Working smoke test suite (`make test-smoke`)
+
+### **Phase 2: Workflow Integration (2 days)**
+- **Day 1**: Update AI agent instruction files with mandatory testing workflow
+  - **CLAUDE.md**: Add "## Testing Requirements" section with clear trigger rules
+  - **.cursorrules**: Add testing requirements and mandatory commands
+  - Document exact commands: `make test-smoke` before src/ changes
+  - Include failure protocol and commit validation steps for both AI systems
+- **Day 2**: Create `docs/testing-guide.md` with developer workflows
+  - Quick reference for when to run tests
+  - Common failure scenarios and fixes
+  - Integration with existing development practices
+- **Validation**: AI agents know exactly when and how to run tests
+- **Production Check**: No changes to existing automation
+- **Deliverable**: Zero-ambiguity testing workflow for all contributors
+
+### **Future Phases: Tier 2 & 3** *[Optional - Implement only if Phase 1 proves valuable]*
+- Comprehensive integration tests
+- Live notification delivery testing
+- Advanced AI agent integration
+
+## 📁 File Structure *[Simplified]*
 
 ```
 docs/
 ├── testing-integration-prd.md          # This document
-├── testing-workflow.md                 # Detailed testing guide
+├── testing-guide.md                    # NEW: Focused testing guide
 └── ...existing docs...
 
 tests/
-├── integration/
-│   ├── test_smoke.py                   # Tier 1: Essential smoke tests
-│   ├── test_integration.py             # Tier 2: Integration tests
-│   ├── test_e2e_validation.py          # Tier 3: E2E validation
-│   └── conftest.py                     # Test configuration
-├── fixtures/
-│   ├── sample_session_data.json        # Realistic test data
-│   ├── sample_state_data.json          # State file fixtures
-│   └── sample_notification_data.json   # Notification fixtures
-└── ...existing unit tests...
+├── integration/                        # EXISTS: Use existing directory
+│   ├── test_smoke.py                   # NEW: Essential smoke tests only
+│   └── conftest.py                     # EXISTS: Test configuration
+├── fixtures/                           # EXISTS: Use existing directory
+│   ├── sample_session_data.json        # NEW: From production data/ files
+│   └── sample_state_data.json          # NEW: From production state
+└── unit/                               # EXISTS: Keep existing unit tests
+    └── ...existing unit tests...
 
-Makefile                                # Simple test commands
-CLAUDE.md                               # Updated with testing requirements
-CONTRIBUTING.md                         # Updated with testing workflow
+Makefile                                # NEW: Simple test interface
+CLAUDE.md                               # UPDATE: Add testing requirements
 ```
 
-## 🎯 Testing Strategy Details
+## 🎯 Testing Strategy Details *[Focused on Tier 1]*
 
-### **Tier 1: Smoke Tests (Essential)**
+### **Tier 1: Essential Smoke Tests**
 
-#### **Test 1: E2E Happy Path**
+#### **Test 1: E2E Happy Path with Content Validation** *[Combined for efficiency]*
 ```python
-def test_daily_update_end_to_end_happy_path():
-    """Test complete daily update flow with real data"""
-    # Use test fixtures, mock browser but real data processing
+def test_daily_update_end_to_end_with_validation():
+    """Test complete daily update flow AND validate notification content"""
+    # Use realistic fixtures from existing data/ directory
+    # Mock browser but use real data processing pipeline
     # Verify: scraper → parser → state update → notification content
-    # Assert: notification contains expected data format
+    # Assert: notification contains expected lesson counts, percentages, finish dates
+    # Assert: no "undefined", "calculating...", or junk values in critical fields
+    # Production validation: ensure no interference with real cron jobs
 ```
 
-#### **Test 2: Notification Content Validation**
+#### **Test 2: Configuration Loading & Validation** *[Prevents startup failures]*
 ```python
-def test_notification_content_is_valid():
-    """Test that notifications contain real data, not junk"""
-    # Run daily update with fixture data
-    # Capture actual notification payload
-    # Assert: contains expected lesson counts, percentages, no "undefined" values
+def test_configuration_loading_and_validation():
+    """Test config loading handles missing/invalid configs gracefully"""
+    # Check: config file parsing, missing required fields, invalid values
+    # Mock: corrupted config files, missing app_config.py
+    # Assert: graceful error handling, helpful error messages
+    # Verify: fallback to defaults where appropriate
+    # Fast: < 5 seconds execution time
 ```
 
-#### **Test 3: Configuration Validation**
+#### **Test 3: Edge Case Data Processing** *[Prevents calculation errors]*
 ```python
-def test_environment_setup_validation():
-    """Test that system detects missing dependencies"""
-    # Mock missing geckodriver, wrong python path, missing config
-    # Run daily update
+def test_edge_case_data_processing():
+    """Test calculation functions handle edge cases gracefully"""
+    # Check: empty data, zero values, missing sessions, future dates
+    # Mock: corrupted session data, incomplete scrape results
+    # Assert: calculations return reasonable values, no division by zero
+    # Verify: progress percentages within bounds (0-100%)
+    # Fast: < 5 seconds execution time
+```
+
+#### **Test 4: Basic Environment Validation** *[Simplified scope]*
+```python
+def test_basic_environment_validation():
+    """Quick smoke test for critical dependencies"""
+    # Check: Python imports work, config files exist, basic file permissions
+    # Mock: missing geckodriver (since we won't test real browser in smoke)
     # Assert: helpful error messages, not silent failures
+    # Fast: < 10 seconds execution time
 ```
 
-### **Tier 2: Integration Tests (Comprehensive)**
+### **Future Phases: Tier 2 & 3** *[Optional Implementation]*
 
-#### **Test 4: Scraper Failure Fallback**
+#### **Tier 2: Integration Tests** *[Implement only if Tier 1 proves valuable]*
+
+#### **Test 5: Scraper Graceful Failure Handling** *[Prevents silent automation failures]*
 ```python
-def test_scraper_fails_gracefully():
-    """Test what happens when scraper completely fails"""
-    # Mock browser to fail, simulate network errors
-    # Verify: proper error handling, fallback to cached data works
-    # Assert: user gets meaningful error notification, not crash
+def test_scraper_graceful_failure_handling():
+    """Test graceful handling when browser automation fails"""
+    # Mock: geckodriver crashes, browser timeouts, network failures
+    # Check: fallback mechanisms, error logging, user notifications
+    # Assert: system continues working, no silent failures
+    # Verify: appropriate error messages, recovery attempts
 ```
 
-#### **Test 5: State Corruption Recovery**
+#### **Test 6: State File Corruption Recovery** *[Prevents data loss]*
 ```python
-def test_corrupted_state_recovery():
+def test_state_file_corruption_recovery():
     """Test recovery from corrupted state files"""
-    # Create invalid state.json, missing config files
-    # Run daily update
-    # Assert: system recovers gracefully, doesn't crash/send bad data
+    # Mock: corrupted JSON, missing files, permission issues
+    # Check: backup restoration, state rebuilding, graceful degradation
+    # Assert: no data loss, system continues functioning
+    # Verify: user is informed of recovery actions
 ```
 
-#### **Test 6: Cross-Component Integration**
-```python
-def test_data_flow_integration():
-    """Test data flows correctly between all components"""
-    # Verify: scraper output → metrics calculator → markdown updater → notifier
-    # Assert: data transformations are correct, no data loss
-```
+#### **Test 7: Cross-Component Integration** *[Verifies data flows]*
+- **Cross-Component Integration**: Verify data flows correctly between all components
 
-### **Tier 3: E2E Validation (Full System)**
+#### **Tier 3: E2E Validation** *[Implement only for critical releases]*
+- **Real Browser Automation**: Test actual Firefox/geckodriver functionality
+- **Live Notification Delivery**: Test real Pushover API integration
 
-#### **Test 7: Real Browser Automation**
-```python
-def test_real_browser_automation():
-    """Test actual Firefox/geckodriver functionality"""
-    # Use real browser, real duome.eu interaction
-    # Verify: browser setup, page interaction, data extraction
-    # Assert: automation works in current environment
-```
+**Note**: These tiers are documented for future reference but should only be implemented after Tier 1 demonstrates clear value in catching production issues.
 
-#### **Test 8: Live Notification Delivery**
-```python
-def test_live_notification_delivery():
-    """Test real Pushover API integration"""
-    # Send test notification via real API
-    # Verify: API response, message delivery
-    # Assert: notification system works end-to-end
-```
+## 🚀 Success Criteria *[Realistic & Measurable]*
 
-## 🚀 Success Criteria
+### **Phase 0 Success (Foundation)**
+- [ ] `make test-unit` works with existing pytest setup
+- [ ] No interference with existing production cron automation
+- [ ] Simple Makefile interface created
 
-### **Immediate Success (Phase 1 Complete)**
-- [ ] Smoke tests run in < 30 seconds
-- [ ] Basic integration tests catch major failures
-- [ ] Make commands provide simple interface
+### **Phase 1 Success (Essential Testing)**
+- [ ] 4 smoke tests run in < 30 seconds total
+- [ ] Tests catch notification content issues (primary goal)
+- [ ] Tests prevent startup failures from config issues
+- [ ] Tests prevent calculation errors in core metrics
+- [ ] Tests use realistic data from existing production files
+- [ ] Tests run in complete isolation from production pipeline
 
-### **Short-term Success (All Phases Complete)**
-- [ ] AI agents automatically run appropriate tests
-- [ ] Engineers have clear testing workflow
-- [ ] Documentation clearly defines testing requirements
-- [ ] Zero silent failures in production
+### **Phase 2 Success (Workflow Integration)**
+- [ ] AI agents have clear testing requirements in both CLAUDE.md and .cursorrules
+- [ ] Mandatory rule documented: run `make test-smoke` before ANY src/ or scripts/ changes
+- [ ] Failure protocol documented: don't commit if tests fail, fix first
+- [ ] Testing workflow integrated into existing development practices
+- [ ] Both Claude Code and Cursor AI systems have identical testing requirements
 
-### **Long-term Success (6 months)**
-- [ ] Reduced support requests for system failures
-- [ ] Faster development cycles with confident deployments
-- [ ] Improved system reliability and user experience
-- [ ] Testing becomes natural part of development workflow
+### **Long-term Success Metrics (3-6 months)**
+- [ ] Zero silent notification failures reported by user
+- [ ] Tests catch real issues before they reach production
+- [ ] Testing becomes natural part of AI agent workflow
+- [ ] Confidence in making changes to core components increases
 
-## 🔍 Risk Assessment
+## 🔍 Risk Assessment *[Updated for Simplified Scope]*
 
-### **High Risk: Test Execution Time**
-- **Risk**: Tests take too long, developers skip them
-- **Mitigation**: Aggressive optimization, parallel execution, tiered approach
+### **High Risk: Production Pipeline Interference**
+- **Risk**: Tests accidentally interfere with existing automation
+- **Mitigation**: Complete isolation, separate test data, thorough validation before deployment
 
-### **Medium Risk: Test Maintenance**
-- **Risk**: Tests become outdated, create false failures
-- **Mitigation**: Realistic fixtures, focus on user experience, regular review
+### **Medium Risk: Test Execution Time**
+- **Risk**: Even 2 tests take too long, developers skip them
+- **Mitigation**: < 30 seconds total, aggressive mocking, parallel execution
 
-### **Low Risk: Developer Adoption**
-- **Risk**: Engineers resist new testing requirements
-- **Mitigation**: Make tests valuable, simple interface, clear documentation
+### **Low Risk: Test Maintenance**
+- **Risk**: Tests become outdated with system changes
+- **Mitigation**: Use realistic production data, focus on user-facing behavior, minimal scope
 
-## 📈 Metrics and Monitoring
+### **Low Risk: Scope Creep**
+- **Risk**: Pressure to implement Tier 2/3 before Tier 1 proves valuable
+- **Mitigation**: Strict phase gates, only advance after demonstrable success
 
-### **Development Metrics**
-- Test execution frequency (daily)
-- Test success rate (> 95%)
-- Time to run tests (< 2 minutes)
-- Test coverage for critical paths (100%)
+## 📈 Metrics and Monitoring *[Focused on Key Indicators]*
 
-### **Production Metrics**
-- Silent failure incidents (target: 0/month)
-- User-reported issues (target: < 1/month)
-- System uptime (target: > 99.5%)
-- Notification delivery success rate (target: > 99%)
+### **Development Metrics (Phase 1)**
+- Smoke test execution time (target: < 30 seconds)
+- Test success rate when run before commits (target: > 95%)
+- AI agent compliance with testing requirements (target: 100%)
 
-## 🎯 Conclusion
+### **Production Impact Metrics (3-6 months)**
+- Silent notification failure incidents (target: 0/month)
+- User-reported "notifications not working" issues (target: 0/month)
+- Production pipeline uptime (maintain: > 99.5% - no degradation from testing)
 
-This PRD defines a comprehensive testing integration strategy that transforms the current reactive debugging approach into a proactive, automated testing workflow. By implementing this 80-20 testing strategy, we ensure that both AI agents and engineers have the tools and processes necessary to catch failures before they impact users.
+## 🎯 Conclusion *[Revised for Incremental Success]*
 
-The tiered approach balances thoroughness with practicality, ensuring that essential tests run quickly while comprehensive validation is available for critical changes. Clear documentation and simple interfaces make testing a natural part of the development workflow rather than an additional burden.
+This PRD defines a **focused, incremental testing strategy** that transforms the current reactive debugging approach into a proactive smoke testing workflow. By implementing just **2 essential tests** initially, we can catch 80% of real-world notification failures while maintaining the stability of the existing production pipeline.
+
+The **simplified, 3-phase approach** emphasizes proving value quickly rather than building comprehensive infrastructure upfront. **Production validation** is built into every phase to ensure no interference with the existing automation that users depend on.
+
+**Key Success Factor**: Only advance to future phases (Tier 2/3) after Phase 1 demonstrates measurable value in catching actual production issues.
 
 ---
 
-**Next Steps**: Begin implementation with Phase 1 (Core Infrastructure) to establish the foundation for the complete testing integration workflow. 
+**Next Steps**: Begin implementation with **Phase 0** (Makefile foundation) followed immediately by **Phase 1** (essential smoke tests) to establish a working testing baseline that validates against the existing production pipeline. 
