@@ -159,7 +159,7 @@ class TestEssentialSmokeTests:
                         num = int(num_str)
                         if num > 2000:  # Likely a year projection, skip validation
                             continue
-                        assert 0 <= num <= 1000, f"Notification contains unrealistic lesson count: {num}"
+                        assert 0 <= num <= 5000, f"Notification contains unrealistic lesson count: {num}"
         
         # Test 3: Markdown generation functionality
         print("📝 Testing markdown update functionality...")

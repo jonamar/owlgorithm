@@ -4,7 +4,7 @@
 # This Makefile provides a unified interface for running tests
 # and supports the Testing Integration PRD requirements.
 
-.PHONY: help test-unit test-smoke test-all clean coverage
+.PHONY: help test-unit test-smoke test-high-value test-integration test-all clean coverage
 
 # Default target
 help:
@@ -12,17 +12,20 @@ help:
 	@echo "============================="
 	@echo ""
 	@echo "Available targets:"
-	@echo "  help        - Show this help message"
-	@echo "  test-unit   - Run unit tests only"
-	@echo "  test-smoke  - Run smoke tests only (< 30 seconds)"
-	@echo "  test-all    - Run all tests (unit + smoke)"
-	@echo "  coverage    - Run tests with coverage report"
-	@echo "  clean       - Clean test artifacts"
+	@echo "  help             - Show this help message"
+	@echo "  test-unit        - Run unit tests only"
+	@echo "  test-smoke       - Run smoke tests only (< 30 seconds)"
+	@echo "  test-high-value  - Run high-value development tests"
+	@echo "  test-integration - Run all integration tests (smoke + high-value)"
+	@echo "  test-all         - Run all tests (unit + integration)"
+	@echo "  coverage         - Run tests with coverage report"
+	@echo "  clean            - Clean test artifacts"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make test-unit     # Run existing unit tests"
-	@echo "  make test-smoke    # Run essential smoke tests"
-	@echo "  make test-all      # Run complete test suite"
+	@echo "  make test-unit        # Run existing unit tests"
+	@echo "  make test-smoke       # Run essential smoke tests (MANDATORY for commits)"
+	@echo "  make test-high-value  # Run additional development safety tests"
+	@echo "  make test-all         # Run complete test suite"
 	@echo ""
 
 # Unit tests - existing pytest setup
@@ -39,8 +42,21 @@ test-smoke:
 	fi
 	python -m pytest tests/integration/test_smoke.py -v --tb=short
 
-# All tests - comprehensive test suite
-test-all: test-unit test-smoke
+# High-value tests - additional development safety
+test-high-value:
+	@echo "🔧 Running high-value development tests..."
+	@if [ ! -f tests/integration/test_high_value.py ]; then \
+		echo "⚠️  High-value tests not implemented yet."; \
+		exit 1; \
+	fi
+	python -m pytest tests/integration/test_high_value.py -v --tb=short
+
+# Integration tests - smoke + high-value
+test-integration: test-smoke test-high-value
+	@echo "🔗 Integration tests completed"
+
+# All tests - comprehensive test suite  
+test-all: test-unit test-integration
 	@echo "✅ All tests completed"
 
 # Coverage report
