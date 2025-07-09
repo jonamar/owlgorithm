@@ -258,12 +258,32 @@ tail -f logs/launchd-*.log
 3. **Test manually**: `python scripts/daily_update.py`
 4. **Common issues**: See troubleshooting section above
 
+## 📱 Notification Behavior
+
+### Smart Throttling
+The system uses intelligent notification throttling to avoid spam:
+- **With Data Changes**: Notifications are sent immediately when progress is detected
+- **Without Data Changes**: Notifications are throttled to once every 2.5 hours during active hours (6am-midnight)
+- **Time Windows**: Respects your configured notification time windows
+
+### Notification Types
+- **Progress Updates**: Sent when lessons/units are completed
+- **Periodic Reminders**: Sent every 2.5 hours when no progress is detected
+- **Goal Tracking**: Dynamic progress with finish date projections
+
+### Customization
+```python
+# In config/app_config.py
+MORNING_START_HOUR: int = 6    # Start notifications at 6 AM
+EVENING_END_HOUR: int = 24     # End notifications at midnight
+```
+
 ## 🎉 Success!
 
 Once configured, your tracker will:
 - ✅ Automatically scrape progress every 30 minutes
 - ✅ Update your progress report
-- ✅ Send smart notifications based on time of day
+- ✅ Send smart notifications with 2.5-hour throttling
 - ✅ Track your goal progress and pace
 - ✅ Provide detailed analytics and projections
 
