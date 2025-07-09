@@ -16,7 +16,7 @@ current_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..')))      # /src
 sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..', '..')))  # project root
 import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 from notifiers.pushover_notifier import PushoverNotifier
 
 # --- Configuration (centralised) ---
@@ -83,61 +83,85 @@ def reset_daily_lessons_if_needed(state_data, json_data=None):
 
 # Metrics calculation functions moved to metrics_calculator.py
 
+def _should_throttle_notification(last_notification_time, has_data_changes):
+    """
+    Determine if notification should be throttled based on last timestamp and data changes.
+    
+    Args:
+        last_notification_time (str|None): ISO timestamp of last notification
+        has_data_changes (bool): Whether data changes were detected
+        
+    Returns:
+        tuple: (should_throttle, minutes_remaining)
+    """
+    if has_data_changes or not last_notification_time:
+        return False, 0
+    
+    try:
+        last_time = datetime.fromisoformat(last_notification_time)
+        time_diff = datetime.now() - last_time
+        throttle_duration = timedelta(hours=getattr(cfg, 'NOTIFICATION_THROTTLE_HOURS', 2.5))
+        
+        if time_diff < throttle_duration:
+            time_remaining = throttle_duration - time_diff
+            minutes_remaining = int(time_remaining.total_seconds() / 60)
+            return True, minutes_remaining
+            
+    except (ValueError, TypeError) as e:
+        # Handle corrupted/malformed timestamps gracefully
+        print(f"⚠️  Invalid notification timestamp format: {last_notification_time}")
+        if logger:
+            logger.external_call("notification", "invalid_timestamp", success=False, error=str(e))
+    
+    return False, 0
+
 def send_time_based_notification(notifier, time_slot, state_data, has_new_lessons, has_new_units, units_completed, json_data):
-    """Send simplified notification - with 2.5-hour throttling when no data changes."""
-    from datetime import datetime, timedelta
+    """Send simplified notification - with configurable throttling when no data changes."""
+    # Ensure state_data is a dict
+    if state_data is None:
+        state_data = {}
     
     # Check if we have any data changes
     has_data_changes = has_new_lessons or has_new_units
     
-    # Get current timestamp
-    current_timestamp = datetime.now().isoformat()
+    # Get current timestamp once
+    current_time = datetime.now()
+    current_timestamp = current_time.isoformat()
     
-    # Check last notification timestamp
+    # Check throttling logic
     last_notification_time = state_data.get('last_notification_timestamp')
+    should_throttle, minutes_remaining = _should_throttle_notification(last_notification_time, has_data_changes)
     
-    # Determine if we should send notification
-    should_send_notification = True
+    if should_throttle:
+        print(f"⏳ No data changes - notification throttled (next in {minutes_remaining} minutes)")
+        return False
     
-    if not has_data_changes and last_notification_time:
-        # No data changes - check if 2.5 hours have passed
-        last_time = datetime.fromisoformat(last_notification_time)
-        time_diff = datetime.now() - last_time
-        throttle_duration = timedelta(hours=2.5)
-        
-        if time_diff < throttle_duration:
-            should_send_notification = False
-            time_remaining = throttle_duration - time_diff
-            minutes_remaining = int(time_remaining.total_seconds() / 60)
-            print(f"⏳ No data changes - notification throttled (next in {minutes_remaining} minutes)")
+    # Send notification
+    daily_progress = calculate_daily_progress(state_data)
+    total_lessons = state_data.get('computed_total_sessions', 0)
     
-    if should_send_notification:
-        daily_progress = calculate_daily_progress(state_data)
-        total_lessons = state_data.get('computed_total_sessions', 0)
-        
-        # Send the notification
-        notifier.send_simple_notification(
-            daily_progress=daily_progress,
-            units_completed=units_completed,
-            total_lessons=total_lessons,
-            state_data=state_data,
-            json_data=json_data
-        )
-        
-        # Update notification timestamp
-        state_data['last_notification_timestamp'] = current_timestamp
-        
-        # Log success
-        change_status = "with data changes" if has_data_changes else "after throttle period"
-        print(f"📱 Push notification sent successfully ({change_status})!")
-        
-        try:
-            if logger:
-                logger.external_call("notification", "sent_unified", success=True)
-        except: 
-            pass
+    notifier.send_simple_notification(
+        daily_progress=daily_progress,
+        units_completed=units_completed,
+        total_lessons=total_lessons,
+        state_data=state_data,
+        json_data=json_data
+    )
     
-    return should_send_notification
+    # Update notification timestamp
+    state_data['last_notification_timestamp'] = current_timestamp
+    
+    # Log success
+    change_status = "with data changes" if has_data_changes else "after throttle period"
+    print(f"📱 Push notification sent successfully ({change_status})!")
+    
+    try:
+        if logger:
+            logger.external_call("notification", "sent_unified", success=True)
+    except: 
+        pass
+    
+    return True
 
 def run_scraper():
     """Runs the duome_raw_scraper.py script to get the latest data."""

@@ -24,7 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `last_notification_timestamp` tracking to state data
 - Enhanced `send_time_based_notification()` with throttling logic
 - Comprehensive unit tests for all throttling scenarios
-- State persistence ensures throttling works across system restarts
+- Throttling state persists across system restarts
+- Configurable throttle duration via `NOTIFICATION_THROTTLE_HOURS`
+
+### Improved
+- **Code quality** refactoring for notification throttling
+  - Extracted `_should_throttle_notification()` for better separation of concerns
+  - Added robust error handling for corrupted timestamps
+  - Configurable throttle duration (defaults to 2.5 hours)
+  - Optimized datetime.now() calls to reduce redundancy
+  - Enhanced test coverage for edge cases (corrupted timestamps, None state data)
+  - Better import organization and performance improvements
 
 ## [2.3.0] - 2025-07-06
 

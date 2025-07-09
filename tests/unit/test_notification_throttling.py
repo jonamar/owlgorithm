@@ -237,4 +237,101 @@ class TestNotificationThrottling:
             total_lessons=150,
             state_data=state_data,
             json_data=json_data
-        ) 
+        )
+    
+    def test_notification_with_corrupted_timestamp(self):
+        """Test notification handling when timestamp is corrupted/malformed"""
+        # Mock notifier
+        notifier = Mock()
+        notifier.send_simple_notification = Mock()
+        
+        # State data with corrupted timestamp
+        state_data = {
+            'last_notification_timestamp': 'not-a-valid-timestamp'
+        }
+        
+        # Call without data changes
+        result = send_time_based_notification(
+            notifier, 'midday', state_data, 
+            has_new_lessons=False, has_new_units=False, 
+            units_completed=2, json_data={}
+        )
+        
+        # Should send notification (corrupted timestamp treated as no previous notification)
+        assert result is True
+        assert notifier.send_simple_notification.called
+        # Timestamp should be updated with valid timestamp
+        assert 'last_notification_timestamp' in state_data
+        new_timestamp = state_data['last_notification_timestamp']
+        assert new_timestamp != 'not-a-valid-timestamp'
+        assert 'T' in new_timestamp  # Should be valid ISO format
+    
+    def test_notification_with_empty_timestamp(self):
+        """Test notification handling when timestamp is empty string"""
+        # Mock notifier
+        notifier = Mock()
+        notifier.send_simple_notification = Mock()
+        
+        # State data with empty timestamp
+        state_data = {
+            'last_notification_timestamp': ''
+        }
+        
+        # Call without data changes
+        result = send_time_based_notification(
+            notifier, 'evening', state_data, 
+            has_new_lessons=False, has_new_units=False, 
+            units_completed=2, json_data={}
+        )
+        
+        # Should send notification (empty timestamp treated as no previous notification)
+        assert result is True
+        assert notifier.send_simple_notification.called
+    
+    def test_notification_with_very_old_timestamp(self):
+        """Test notification handling with very old timestamp (years ago)"""
+        # Mock notifier
+        notifier = Mock()
+        notifier.send_simple_notification = Mock()
+        
+        # State data with very old timestamp (2 years ago)
+        two_years_ago = datetime.now() - timedelta(days=730)
+        state_data = {
+            'last_notification_timestamp': two_years_ago.isoformat()
+        }
+        
+        # Call without data changes
+        result = send_time_based_notification(
+            notifier, 'morning', state_data, 
+            has_new_lessons=False, has_new_units=False, 
+            units_completed=2, json_data={}
+        )
+        
+        # Should send notification (very old timestamp means throttle period has passed)
+        assert result is True
+        assert notifier.send_simple_notification.called
+        # Timestamp should be updated
+        assert state_data['last_notification_timestamp'] != two_years_ago.isoformat()
+    
+    def test_notification_with_none_state_data(self):
+        """Test notification handling when state_data is None or missing keys"""
+        # Mock notifier
+        notifier = Mock()
+        notifier.send_simple_notification = Mock()
+        
+        # None state data
+        state_data = None
+        
+        # Call without data changes - should handle gracefully
+        with patch('src.core.daily_tracker.calculate_daily_progress') as mock_calc:
+            mock_calc.return_value = {'completed': 0, 'goal': 12, 'remaining': 12}
+            
+            result = send_time_based_notification(
+                notifier, 'midday', state_data, 
+                has_new_lessons=False, has_new_units=False, 
+                units_completed=0, json_data={}
+            )
+        
+        # Should handle gracefully and send notification (no previous timestamp)
+        assert result is True
+        assert notifier.send_simple_notification.called 
