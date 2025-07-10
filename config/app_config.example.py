@@ -30,6 +30,9 @@ VENV_PYTHON_PATH: str = "/path/to/your/project/duolingo_env/bin/python"  # Virtu
 # --- API endpoints ---
 PUSHOVER_API_URL: str = "https://api.pushover.net/1/messages.json"
 
+# Notification throttling (hours)
+NOTIFICATION_THROTTLE_HOURS: float = 2.5  # Throttle notifications when no data changes
+
 # --- Timeout Configuration ---
 BROWSER_WAIT_TIMEOUT: int = 15          # WebDriver wait timeout in seconds
 VALIDATION_WAIT_SECONDS: int = 30       # Headless validation wait time

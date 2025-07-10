@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Notification throttling** to prevent spam when no progress is detected
+  - Smart 2.5-hour throttling for notifications when no data changes occur
+  - Immediate notifications when progress is detected (lessons/units completed)
+  - Persistent timestamp tracking to maintain throttling state across runs
+  - Clear user feedback showing throttle status and time remaining
+
+### Changed
+- **Notification logic** now respects user engagement patterns
+  - Notifications sent immediately when progress is made
+  - Throttled to every 2.5 hours during active hours (6am-midnight) when no progress
+  - Maintains existing time window behavior (respects configured hours)
+
+### Technical
+- Added `last_notification_timestamp` tracking to state data
+- Enhanced `send_time_based_notification()` with throttling logic
+- Comprehensive unit tests for all throttling scenarios
+- Throttling state persists across system restarts
+- Configurable throttle duration via `NOTIFICATION_THROTTLE_HOURS`
+
+### Improved
+- **Code quality** refactoring for notification throttling
+  - Extracted `_should_throttle_notification()` for better separation of concerns
+  - Added robust error handling for corrupted timestamps
+  - Configurable throttle duration (defaults to 2.5 hours)
+  - Optimized datetime.now() calls to reduce redundancy
+  - Enhanced test coverage for edge cases (corrupted timestamps, None state data)
+  - Better import organization and performance improvements
+
 ## [2.3.0] - 2025-07-06
 
 ### Added
