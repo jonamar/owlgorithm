@@ -38,6 +38,27 @@ The setup guide includes:
 4. **Notifies** you with smart, time-appropriate messages
 5. **Updates** your progress dashboard automatically
 
+## 🔄 Dual-Mode Tracking System
+
+Owlgorithm uses an intelligent dual-mode tracking system that adapts to Duolingo's course structure changes:
+
+### Legacy Mode (Sections 1-4)
+- **Variable lessons per unit** (~31 average)
+- **Complex unit boundary detection** using session timing patterns
+- **Historical accuracy** for completed sections
+
+### Simplified Mode (Sections 5+)
+- **Fixed 7 lessons per unit** (Duolingo's new structure)
+- **Known unit counts** per section (255, 245, 180, 185)
+- **Simple lesson counting** for accurate projections
+
+### Why Dual-Mode?
+Duolingo restructured their B1/B2 content (Sections 5-8) by splitting multi-lesson units into smaller single-lesson units. This 5x increase in unit count required a new tracking approach while preserving historical data integrity.
+
+**Transition Point**: Lesson #89 (start of Section 5)
+- **Before**: Complex tracking preserves accurate unit completion data
+- **After**: Simplified tracking uses fixed ratios for reliable projections
+
 ## 📊 Versioning & Updates
 
 Owlgorithm follows user-focused versioning:

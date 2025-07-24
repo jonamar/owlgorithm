@@ -183,10 +183,11 @@ def calculate_performance_metrics(json_data):
 
 def get_tracked_unit_progress(state_data, json_data=None):
     """
-    Single source of truth for tracked unit progress calculations.
+    Dual-mode tracked unit progress calculations.
     
-    Returns progress based on 3 tracked complete units only, used by both
-    notifications and markdown updates for consistency.
+    Uses legacy tracking for lessons 1-88 (Sections 1-4) and simplified 
+    tracking for lessons 89+ (Section 5+). Maintains historical data integrity
+    while enabling accurate projections for the new unit structure.
     
     Args:
         state_data (dict): Current tracker state data (can be None for testing)
@@ -201,16 +202,28 @@ def get_tracked_unit_progress(state_data, json_data=None):
     if state_data is None:
         state_data = {}
     
-    # Core tracking data (clean, no historical confusion)
-    completed_units = len(cfg.TRACKED_COMPLETE_UNITS)
+    # Dual-mode tracking data
     total_lessons = state_data.get('total_lessons_completed', 0)
-    remaining_units = cfg.TOTAL_COURSE_UNITS - cfg.ACTUALLY_COMPLETED_TOTAL  # Total actually completed (historical + tracked)
     
-    # Calculate lessons per unit - use course average for consistency
-    # Note: Tracked average (total_lessons/completed_units) may be skewed by 
-    # excessive practice in early units, so we use the established course average
-    tracked_lessons_per_unit = total_lessons / completed_units if completed_units > 0 else cfg.BASE_LESSONS_PER_UNIT
-    lessons_per_unit = cfg.BASE_LESSONS_PER_UNIT  # Use course average (31) for projections
+    # Legacy tracking (Sections 1-4): lessons 1-88
+    legacy_lessons = min(total_lessons, cfg.LEGACY_LESSONS_COMPLETED)
+    legacy_units_completed = cfg.LEGACY_COMPLETED_UNITS
+    
+    # Section 5+ tracking: lessons 89+
+    section5_lessons = max(0, total_lessons - cfg.SECTION_5_START_LESSON + 1)
+    section5_units_completed = section5_lessons / cfg.NEW_LESSONS_PER_UNIT
+    
+    # Combined totals
+    completed_units = legacy_units_completed + section5_units_completed
+    
+    # Calculate remaining work using new structure
+    sections_5_8_total_units = sum([cfg.SECTION_UNIT_COUNTS[i] for i in range(5, 9)])
+    section5_units_remaining = cfg.SECTION_UNIT_COUNTS[5] - section5_units_completed
+    sections_6_8_units = sum([cfg.SECTION_UNIT_COUNTS[i] for i in range(6, 9)])
+    remaining_units = section5_units_remaining + sections_6_8_units
+    
+    # Use appropriate lessons per unit for projections (simplified to Section 5+ rate)
+    lessons_per_unit = cfg.NEW_LESSONS_PER_UNIT
     
     # 18-month goal timeline tracking
     goal_start_date = datetime.strptime(cfg.TRACKING_START_DATE, "%Y-%m-%d")
@@ -270,6 +283,13 @@ def get_tracked_unit_progress(state_data, json_data=None):
         'pace_difference': pace_difference,
         'pace_status': pace_status_display,
         'daily_goal': cfg.DAILY_GOAL_LESSONS,
+        
+        # Dual-mode tracking details
+        'legacy_units_completed': legacy_units_completed,
+        'legacy_lessons_completed': legacy_lessons,
+        'section5_units_completed': section5_units_completed,
+        'section5_lessons_completed': section5_lessons,
+        'tracking_mode': 'dual_mode',
         
         # 18-month goal tracking
         'goal_start_date': goal_start_date.strftime('%Y-%m-%d'),
