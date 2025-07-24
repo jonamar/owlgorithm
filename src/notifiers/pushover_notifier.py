@@ -132,12 +132,12 @@ class PushoverNotifier:
         required_pace = progress['required_lessons_per_day']
         pct = int((completed / required_pace) * 100) if required_pace > 0 else 0
         
-        # Weekly average
+        # Weekly average (lessons per day)
         weekly_avg = 0
         if json_data:
             perf_metrics = calculate_performance_metrics(json_data)
             if perf_metrics:
-                weekly_avg = perf_metrics['recent_avg_sessions']
+                weekly_avg = perf_metrics['recent_avg_lessons']  # Use lessons, not sessions
         
         # Finish date with robust formatting
         finish_line = "finish: calculating..."
@@ -160,9 +160,12 @@ class PushoverNotifier:
             except (ValueError, TypeError):
                 finish_line = f"finish: {projected_date}"
         
-        # Build 3-line message
-        line1 = f"{completed} / {required_pace:.1f} lessons ({pct}%)"
-        line2 = f"week avg: {weekly_avg:.1f} per day" if weekly_avg > 0 else "week avg: calculating..."
+        # Course completion percentage
+        course_progress_pct = progress.get('course_completion_percentage', 0)
+        
+        # Build 3-line message with course completion percentage
+        line1 = f"{completed} / {required_pace:.1f} lessons ({pct}% daily)"
+        line2 = f"course: {course_progress_pct:.1f}% • week avg: {weekly_avg:.1f}/day" if weekly_avg > 0 else f"course: {course_progress_pct:.1f}% • week avg: calculating..."
         line3 = finish_line
         
         return f"{line1}\n{line2}\n{line3}"

@@ -123,20 +123,29 @@ def calculate_completion_projection(state_data):
 
 
 def calculate_performance_metrics(json_data):
-    """Calculate daily/weekly averages and performance metrics from session data."""
-    daily_stats = defaultdict(lambda: {'sessions': 0, 'xp': 0})
+    """Calculate daily/weekly averages and performance metrics from lesson session data."""
+    from datetime import datetime, timedelta
+    
+    daily_stats = defaultdict(lambda: {'lessons': 0, 'sessions': 0, 'xp': 0})
+    total_lessons = 0
     total_sessions = 0
     total_xp = 0
     
     for session in json_data.get('sessions', []):
         date = session.get('date', 'unknown')
         xp = session.get('xp', 0)
+        is_lesson = session.get('is_lesson', False)
         
         if date != 'unknown':
             daily_stats[date]['sessions'] += 1
             daily_stats[date]['xp'] += xp
             total_sessions += 1
             total_xp += xp
+            
+            # Count lessons separately
+            if is_lesson:
+                daily_stats[date]['lessons'] += 1
+                total_lessons += 1
     
     # Get date range
     dates = sorted([d for d in daily_stats.keys()])
@@ -145,20 +154,28 @@ def calculate_performance_metrics(json_data):
     
     active_days = len(dates)
     daily_avg_sessions = total_sessions / active_days if active_days > 0 else 0
+    daily_avg_lessons = total_lessons / active_days if active_days > 0 else 0
     daily_avg_xp = total_xp / active_days if active_days > 0 else 0
     
     # Weekly averages
     weekly_avg_sessions = daily_avg_sessions * 7
+    weekly_avg_lessons = daily_avg_lessons * 7
     weekly_avg_xp = daily_avg_xp * 7
     
-    # Recent 7-day performance
-    recent_dates = dates[-7:] if len(dates) >= 7 else dates
-    recent_sessions = sum(daily_stats[d]['sessions'] for d in recent_dates)
-    recent_xp = sum(daily_stats[d]['xp'] for d in recent_dates)
-    recent_days = len(recent_dates)
+    # Recent 7-day performance (last 7 calendar days, not just active days)
+    today = datetime.now().date()
+    last_7_days = []
+    for i in range(7):
+        date_str = (today - timedelta(days=i)).strftime('%Y-%m-%d')
+        last_7_days.append(date_str)
     
-    recent_avg_sessions = recent_sessions / recent_days if recent_days > 0 else 0
-    recent_avg_xp = recent_xp / recent_days if recent_days > 0 else 0
+    recent_lessons = sum(daily_stats[d]['lessons'] for d in last_7_days if d in daily_stats)
+    recent_sessions = sum(daily_stats[d]['sessions'] for d in last_7_days if d in daily_stats) 
+    recent_xp = sum(daily_stats[d]['xp'] for d in last_7_days if d in daily_stats)
+    
+    recent_avg_lessons = recent_lessons / 7  # Always divide by 7 for true daily average
+    recent_avg_sessions = recent_sessions / 7
+    recent_avg_xp = recent_xp / 7
     
     # Calculate streak
     consecutive_days = 0
@@ -170,14 +187,17 @@ def calculate_performance_metrics(json_data):
     
     return {
         'daily_avg_sessions': daily_avg_sessions,
+        'daily_avg_lessons': daily_avg_lessons,
         'weekly_avg_sessions': weekly_avg_sessions,
+        'weekly_avg_lessons': weekly_avg_lessons,
         'daily_avg_xp': daily_avg_xp,
         'weekly_avg_xp': weekly_avg_xp,
         'active_days': active_days,
         'consecutive_days': consecutive_days,
         'recent_avg_sessions': recent_avg_sessions,
+        'recent_avg_lessons': recent_avg_lessons,
         'recent_avg_xp': recent_avg_xp,
-        'recent_days': recent_days
+        'recent_days': 7  # Always 7 for calendar days
     }
 
 
@@ -231,7 +251,11 @@ def get_tracked_unit_progress(state_data, json_data=None):
     today = datetime.now()
     days_elapsed = (today - goal_start_date).days
     days_remaining = (goal_end_date - today).days
-    completion_percentage = (days_elapsed / cfg.GOAL_DAYS) * 100 if days_elapsed > 0 else 0
+    time_completion_percentage = (days_elapsed / cfg.GOAL_DAYS) * 100 if days_elapsed > 0 else 0
+    
+    # Course completion percentage (lessons completed vs total needed)
+    total_course_lessons = cfg.TOTAL_COURSE_UNITS * cfg.NEW_LESSONS_PER_UNIT  # Using simplified unit structure
+    course_completion_percentage = (total_lessons / total_course_lessons) * 100 if total_course_lessons > 0 else 0
     
     # Burn rate analysis
     total_lessons_remaining = remaining_units * lessons_per_unit
@@ -296,7 +320,8 @@ def get_tracked_unit_progress(state_data, json_data=None):
         'goal_end_date': goal_end_date.strftime('%Y-%m-%d'),
         'days_elapsed': days_elapsed,
         'days_remaining': days_remaining,
-        'completion_percentage': completion_percentage,
+        'time_completion_percentage': time_completion_percentage,
+        'course_completion_percentage': course_completion_percentage,
         'actual_units_per_day': actual_units_per_day,
         'actual_lessons_per_day': actual_lessons_per_day,
         'required_units_per_day': required_units_per_day,
