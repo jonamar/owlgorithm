@@ -145,7 +145,7 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     goal_section = f"""
 ### 18-Month Goal Progress (Started {progress['goal_start_date']})
 - **Goal End Date**: {progress['goal_end_date']}
-- **Days Elapsed**: {progress['days_elapsed']} of {cfg.GOAL_DAYS} days ({progress['completion_percentage']:.1f}% complete)
+- **Days Elapsed**: {progress['days_elapsed']} of {cfg.GOAL_DAYS} days ({progress['time_completion_percentage']:.1f}% complete)
 - **Historical Pace**: {progress['actual_units_per_day']:.3f} units/day, {progress['actual_lessons_per_day']:.1f} lessons/day  
 - **Required Pace**: {progress['required_units_per_day']:.3f} units/day, {progress['required_lessons_per_day']:.1f} lessons/day
 - **Status**: {progress['pace_status']}
