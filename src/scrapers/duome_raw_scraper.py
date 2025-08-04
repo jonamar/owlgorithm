@@ -369,18 +369,52 @@ def fetch_duome_data_with_update(username, headless=True):
     finally:
         if driver:
             try:
+                print("Shutting down Firefox browser...")
                 driver.quit()
-            except Exception:
-                cleanup_zombie_processes()  # Only cleanup on quit failure
+                print("✅ Firefox browser shut down successfully")
+            except Exception as e:
+                print(f"⚠️ Failed to properly quit Firefox driver: {e}")
+                print("Running cleanup for zombie processes...")
+                cleanup_zombie_processes()
+        else:
+            # Even if driver wasn't created, clean up any potential zombie processes
+            cleanup_zombie_processes()
 
 
 def cleanup_zombie_processes():
-    """Clean up hanging geckodriver processes (minimal prevention).""" 
+    """Clean up hanging geckodriver and Firefox processes (minimal prevention).""" 
     import subprocess
+    
+    # Clean up geckodriver processes
     try:
         result = subprocess.run(['pkill', '-f', 'geckodriver'], capture_output=True)
         if result.returncode == 0:
             print("🧹 Cleaned up hanging geckodriver processes")
+    except Exception:
+        pass  # Non-critical, continue anyway
+    
+    # Clean up headless Firefox processes that might be left behind
+    try:
+        # Look for headless Firefox processes specifically
+        result = subprocess.run(['pkill', '-f', 'firefox.*--headless'], capture_output=True)
+        if result.returncode == 0:
+            print("🧹 Cleaned up hanging headless Firefox processes")
+    except Exception:
+        pass  # Non-critical, continue anyway
+    
+    # Also clean up any Firefox processes with marionette (automation) flag
+    try:
+        result = subprocess.run(['pkill', '-f', 'firefox.*--marionette'], capture_output=True)
+        if result.returncode == 0:
+            print("🧹 Cleaned up hanging Firefox automation processes")
+    except Exception:
+        pass  # Non-critical, continue anyway
+    
+    # Clean up Firefox plugin-container processes (child processes)
+    try:
+        result = subprocess.run(['pkill', '-f', 'plugin-container'], capture_output=True)
+        if result.returncode == 0:
+            print("🧹 Cleaned up hanging Firefox plugin-container processes")
     except Exception:
         pass  # Non-critical, continue anyway
 
