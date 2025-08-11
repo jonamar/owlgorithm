@@ -252,40 +252,41 @@ def get_newly_completed_units(json_data, state_data):
 
 # Markdown file update function moved to markdown_updater.py
 
-def main():
-    """Main execution function."""
-    # Initialize logging with automation detection
+def _load_and_initialize():
+    """Load state and initialize logging"""
     import sys
     run_type = "automated" if len(sys.argv) == 1 and 'launchd' in str(sys.argv) else "manual"
     global logger
     logger = OWLLogger("daily_tracker", run_type)
     logger.execution_step("Daily tracker started")
     
+    # Load state data
+    state_repo = AtomicJSONRepository(cfg.STATE_FILE, auto_migrate=True)
+    state_data = state_repo.load({})
+    
+    return state_repo, state_data
+
+def _run_scraper_and_load_data():
+    """Run scraper and load JSON data"""
     if not run_scraper():
         logger.execution_step("Scraper failed - exiting")
-        return
+        return None, None
 
     latest_json_path = find_latest_json_file()
     if not latest_json_path:
         print("❌ No JSON file found after running scraper.")
         logger.execution_step("No JSON file found - exiting")
-        return
+        return None, None
     
     logger.execution_step(f"Processing data from {latest_json_path}")
 
     with open(latest_json_path, 'r') as f:
         json_data = json.load(f)
         
-    # Load or create state data using atomic operations with versioning
-    state_repo = AtomicJSONRepository(cfg.STATE_FILE, auto_migrate=True)
-    state_data = state_repo.load({})
+    return json_data, latest_json_path
 
-    # Handle daily lesson tracking (now that we have json_data)
-    daily_reset_occurred, state_data = reset_daily_lessons_if_needed(state_data, json_data)
-    current_time_slot = get_current_time_slot()
-    
-    print(f"🕐 Current time slot: {current_time_slot}")
-
+def _analyze_changes(json_data, state_data):
+    """Analyze what has changed since last run"""
     # Check for changes
     newly_completed, all_completed_in_json, has_new_sessions = get_newly_completed_units(json_data, state_data)
     
@@ -300,7 +301,12 @@ def main():
     # Track both old metrics for backwards compatibility
     old_total_lessons = state_data.get('total_lessons_completed', 0)  # Legacy field
     old_computed_total = state_data.get('computed_total_sessions', 0)  # New computed field
+    
+    return (newly_completed, all_completed_in_json, has_new_sessions, current_scrape_date,
+            new_total_lessons, new_core_lessons, new_practice_sessions, old_computed_total)
 
+def _reconcile_state_data(json_data, state_data, new_total_lessons, old_computed_total):
+    """Handle state reconciliation and detect changes"""
     # === STATE RECONCILIATION ===
     # Handle duome.eu data window changes (sessions may drop out or be added)
     current_date = get_current_date()
@@ -316,15 +322,8 @@ def main():
     print(f"   - State daily: {stored_daily_sessions} → Actual today: {actual_today_sessions} (diff: {daily_diff:+d})")
     
     # Detect changes using multiple approaches
-    has_new_units = bool(newly_completed)
-    
-    # Primary: Check if today's sessions increased (most reliable)
     has_new_daily_sessions = actual_today_sessions > stored_daily_sessions
-    
-    # Secondary: Check total count increase (but handle data window changes)
     has_total_increase = new_total_lessons > old_computed_total
-    
-    # Overall: Has new lessons if either daily increased OR total increased significantly
     has_new_lessons = has_new_daily_sessions or has_total_increase
     
     # Update daily counter based on actual data (most reliable)
@@ -336,22 +335,12 @@ def main():
         print(f"📉 Data window changed (total: {total_diff:+d}), but daily count stays accurate at {actual_today_sessions}")
         state_data['daily_lessons_completed'] = actual_today_sessions
     
-    last_scrape_date = state_data.get('last_scrape_date', '')
-    force_update = current_scrape_date != last_scrape_date
-    
-    # Log what's happening
-    print(f"🔍 Checking for changes...")
-    print(f"   - New units completed: {'Yes' if has_new_units else 'No'}")
-    print(f"   - New daily sessions: {'Yes' if has_new_daily_sessions else 'No'} ({stored_daily_sessions} → {actual_today_sessions})")
-    print(f"   - Total count changed: {'Yes' if has_total_increase else 'No'} ({old_computed_total} → {new_total_lessons})")
-    print(f"   - Overall new lessons: {'Yes' if has_new_lessons else 'No'}")
-    print(f"   - New sessions detected: {'Yes' if has_new_sessions else 'No'}")
-    print(f"   - Last scrape date: {last_scrape_date}, Current: {current_scrape_date}")
+    return has_new_lessons, has_new_daily_sessions, has_total_increase, actual_today_sessions, stored_daily_sessions
 
-    # Initialize Pushover notifier
-    notifier = PushoverNotifier()
-
-    # Update data if changes detected
+def _update_data_if_changed(has_new_units, has_new_lessons, has_new_sessions, force_update, newly_completed, 
+                           new_total_lessons, new_core_lessons, new_practice_sessions, all_completed_in_json,
+                           current_scrape_date, json_data, state_data, state_repo):
+    """Update markdown and state data if changes detected"""
     if has_new_units or has_new_lessons or has_new_sessions or force_update:
         print(f"🔄 Changes detected, updating tracker data...")
         
@@ -396,6 +385,11 @@ def main():
         state_data['last_scrape_date'] = current_scrape_date
         state_repo.save(state_data)
 
+def _send_notifications_if_enabled(has_new_lessons, has_new_units, newly_completed, json_data, state_data, state_repo, current_time_slot):
+    """Send time-based notifications if enabled"""
+    # Initialize Pushover notifier
+    notifier = PushoverNotifier()
+    
     # Send time-based notifications with throttling logic
     if notifier.is_enabled():
         notification_sent = send_time_based_notification(
@@ -406,6 +400,51 @@ def main():
         # Save state if notification was sent (to persist timestamp)
         if notification_sent:
             state_repo.save(state_data)
+
+def main():
+    """Main execution function."""
+    # Initialize logging and load state
+    state_repo, state_data = _load_and_initialize()
+    
+    # Run scraper and load data
+    json_data, latest_json_path = _run_scraper_and_load_data()
+    if json_data is None:
+        return
+    
+    # Handle daily reset
+    daily_reset_occurred, state_data = reset_daily_lessons_if_needed(state_data, json_data)
+    current_time_slot = get_current_time_slot()
+    print(f"🕐 Current time slot: {current_time_slot}")
+    
+    # Analyze changes
+    (newly_completed, all_completed_in_json, has_new_sessions, current_scrape_date,
+     new_total_lessons, new_core_lessons, new_practice_sessions, old_computed_total) = _analyze_changes(json_data, state_data)
+    
+    # Reconcile state and detect changes
+    (has_new_lessons, has_new_daily_sessions, has_total_increase, 
+     actual_today_sessions, stored_daily_sessions) = _reconcile_state_data(json_data, state_data, new_total_lessons, old_computed_total)
+    
+    # Determine various change flags
+    has_new_units = bool(newly_completed)
+    last_scrape_date = state_data.get('last_scrape_date', '')
+    force_update = current_scrape_date != last_scrape_date
+    
+    # Log what's happening
+    print(f"🔍 Checking for changes...")
+    print(f"   - New units completed: {'Yes' if has_new_units else 'No'}")
+    print(f"   - New daily sessions: {'Yes' if has_new_daily_sessions else 'No'} ({stored_daily_sessions} → {actual_today_sessions})")
+    print(f"   - Total count changed: {'Yes' if has_total_increase else 'No'} ({old_computed_total} → {new_total_lessons})")
+    print(f"   - Overall new lessons: {'Yes' if has_new_lessons else 'No'}")
+    print(f"   - New sessions detected: {'Yes' if has_new_sessions else 'No'}")
+    print(f"   - Last scrape date: {last_scrape_date}, Current: {current_scrape_date}")
+    
+    # Update data if needed
+    _update_data_if_changed(has_new_units, has_new_lessons, has_new_sessions, force_update, newly_completed, 
+                           new_total_lessons, new_core_lessons, new_practice_sessions, all_completed_in_json,
+                           current_scrape_date, json_data, state_data, state_repo)
+    
+    # Send notifications
+    _send_notifications_if_enabled(has_new_lessons, has_new_units, newly_completed, json_data, state_data, state_repo, current_time_slot)
 
 
 if __name__ == "__main__":

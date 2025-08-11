@@ -13,21 +13,8 @@ from .metrics_calculator import calculate_performance_metrics, get_tracked_unit_
 
 
 
-def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None, state_data=None):
-    """Reads, updates, and writes the progress-dashboard.md file.
-    
-    Args:
-        newly_completed_count: Number of newly completed units
-        total_lessons_count: Total lessons and practice sessions completed
-        content: Content of the markdown file
-        core_lessons: Optional number of core lessons (without practice)
-        practice_sessions: Optional number of practice sessions
-        json_data: Optional session data for calculating performance metrics
-        state_data: Optional state data for calculating goal progress
-    """
-    print(f"📈 Updating stats...")
-    
-    # --- Read existing values ---
+def _validate_existing_content(content):
+    """Validate and parse existing content to extract current values"""
     try:
         # More robust regex that handles markdown formatting, bullet points, etc.
         completed_units_match = re.search(r"\*\*Completed Units\*\*:?\s*(\d+)", content)
@@ -44,14 +31,15 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
             
         completed_units_old = int(completed_units_match.group(1))
         print(f"Found completed units: {completed_units_old}")
+        return completed_units_old
     except (AttributeError, ValueError) as e:
         print(f"❌ Could not parse 'Completed Units' from {cfg.MARKDOWN_FILE}: {e}")
-        return False
+        return None
 
-    # --- Calculate new values using centralized calculation throughout ---
-    progress = get_tracked_unit_progress(state_data, json_data)
-    new_completed_units = progress['completed_units']  # Use centralized calculation (tracking-only)
-    new_remaining_units = progress['remaining_units']  # Use centralized calculation  
+def _update_basic_stats(content, progress, total_lessons_count, core_lessons, practice_sessions):
+    """Update basic stats like units, lessons, and time requirements"""
+    new_completed_units = progress['completed_units']
+    new_remaining_units = progress['remaining_units']
     total_lessons_remaining = progress['total_lessons_remaining']
     lessons_per_day_required = progress['required_lessons_per_day']
     time_per_day_required_mins = lessons_per_day_required * cfg.BASE_MINS_PER_LESSON
@@ -60,7 +48,6 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     minutes = int(time_per_day_required_mins % 60)
     time_per_day_str = f"~{hours} hour {minutes} minutes"
 
-    # --- Update content with new values ---
     # Update Total Units in Course to show trackable units (not full course)
     content = re.sub(r"(\*\*Total Units in Course\*\*:\s*)(\d+)", rf"\g<1>{cfg.TRACKABLE_TOTAL_UNITS}", content)
     content = re.sub(r"(Total Units in Course:\s*)(\d+)", rf"\g<1>{cfg.TRACKABLE_TOTAL_UNITS}", content)
@@ -90,37 +77,45 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
     content = re.sub(r"(Lessons Per Day Required:\s*)\*\*~?[\d.]+\*\*", rf"\g<1>**~{lessons_per_day_required:.1f} lessons**", content)
     content = re.sub(r"(Time Per Day Required:\s*)\*\*~?[\w\s]+\*\*", rf"\g<1>**{time_per_day_str}**", content)
     
-    # Update performance metrics if we have session data
-    if json_data:
-        metrics = calculate_performance_metrics(json_data)
-        if metrics:
-            # Update daily average
-            content = re.sub(r"(\*\*Daily Average\*\*:\s*)[\d.]+\s*lessons/day.*", 
-                          rf"\g<1>{metrics['daily_avg_sessions']:.1f} lessons/day (across {metrics['active_days']} active days)", content)
-            
-            # Update weekly average
-            content = re.sub(r"(\*\*Weekly Average\*\*:\s*)[\d.]+\s*lessons/week", 
-                          rf"\g<1>{metrics['weekly_avg_sessions']:.1f} lessons/week", content)
-            
-            # Update XP daily average
-            content = re.sub(r"(\*\*XP Daily Average\*\*:\s*)[\d,]+\s*XP/day", 
-                          rf"\g<1>{metrics['daily_avg_xp']:.0f} XP/day", content)
-            
-            # Update XP weekly average
-            content = re.sub(r"(\*\*XP Weekly Average\*\*:\s*)[\d,]+\s*XP/week", 
-                          rf"\g<1>{metrics['weekly_avg_xp']:,.0f} XP/week", content)
-            
-            # Update current streak
-            content = re.sub(r"(\*\*Current Streak\*\*:\s*)\d+\s*consecutive active days", 
-                          rf"\g<1>{metrics['consecutive_days']} consecutive active days", content)
-            
-            # Update recent performance
-            content = re.sub(r"(\*\*Recent Performance\*\*.*?:\s*)[\d.]+\s*lessons/day,\s*[\d,]+\s*XP/day", 
-                          rf"\g<1>{metrics['recent_avg_sessions']:.1f} lessons/day, {metrics['recent_avg_xp']:.0f} XP/day", content)
+    return content
+
+def _update_performance_metrics(content, json_data):
+    """Update performance metrics section if data is available"""
+    if not json_data:
+        return content
         
-    # Update goal progress metrics using centralized calculation (always run)
-    progress = get_tracked_unit_progress(state_data, json_data)
+    metrics = calculate_performance_metrics(json_data)
+    if not metrics:
+        return content
+        
+    # Update daily average
+    content = re.sub(r"(\*\*Daily Average\*\*:\s*)[\d.]+\s*lessons/day.*", 
+                  rf"\g<1>{metrics['daily_avg_sessions']:.1f} lessons/day (across {metrics['active_days']} active days)", content)
     
+    # Update weekly average
+    content = re.sub(r"(\*\*Weekly Average\*\*:\s*)[\d.]+\s*lessons/week", 
+                  rf"\g<1>{metrics['weekly_avg_sessions']:.1f} lessons/week", content)
+    
+    # Update XP daily average
+    content = re.sub(r"(\*\*XP Daily Average\*\*:\s*)[\d,]+\s*XP/day", 
+                  rf"\g<1>{metrics['daily_avg_xp']:.0f} XP/day", content)
+    
+    # Update XP weekly average
+    content = re.sub(r"(\*\*XP Weekly Average\*\*:\s*)[\d,]+\s*XP/week", 
+                  rf"\g<1>{metrics['weekly_avg_xp']:,.0f} XP/week", content)
+    
+    # Update current streak
+    content = re.sub(r"(\*\*Current Streak\*\*:\s*)\d+\s*consecutive active days", 
+                  rf"\g<1>{metrics['consecutive_days']} consecutive active days", content)
+    
+    # Update recent performance
+    content = re.sub(r"(\*\*Recent Performance\*\*.*?:\s*)[\d.]+\s*lessons/day,\s*[\d,]+\s*XP/day", 
+                  rf"\g<1>{metrics['recent_avg_sessions']:.1f} lessons/day, {metrics['recent_avg_xp']:.0f} XP/day", content)
+    
+    return content
+
+def _update_goal_progress_section(content, progress):
+    """Update goal progress and 18-month tracking section"""
     # Update daily requirement using centralized calculation
     content = re.sub(r"(\*\*Daily Requirement\*\*:\s*)[\d.]+\s*lessons/day.*", 
                   rf"\g<1>{progress['required_lessons_per_day']:.1f} lessons/day (based on {progress['completed_units']} tracked units, {progress['lessons_per_unit']:.1f} avg lessons/unit)", content)
@@ -164,11 +159,18 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
         content = re.sub(r"(### Completion Goal: 18 Months)", 
                       goal_section + r"\1", content)
     
+    return content
+
+def _finalize_and_write_content(content, newly_completed_count, total_lessons_count, core_lessons, practice_sessions):
+    """Finalize content updates and write to file"""
+    # Update last modified date
     content = re.sub(r"(\*Last updated:\s*)[\w\s,]+", rf"\g<1>{datetime.now().strftime('%B %d, %Y')}", content)
 
+    # Write to file
     with open(cfg.MARKDOWN_FILE, 'w') as f:
         f.write(content)
     
+    # Print success messages
     print(f"✅ Successfully updated {cfg.MARKDOWN_FILE}.")
     if newly_completed_count > 0:
         print(f"   - Newly Completed Units: {newly_completed_count}")
@@ -178,4 +180,35 @@ def update_markdown_file(newly_completed_count, total_lessons_count, content, co
         print(f"   - Total Sessions: {total_lessons_count} (Core: {core_lessons}, Practice: {practice_sessions})")
     else:
         print(f"   - Total Sessions: {total_lessons_count}")
+
+def update_markdown_file(newly_completed_count, total_lessons_count, content, core_lessons=None, practice_sessions=None, json_data=None, state_data=None):
+    """Reads, updates, and writes the progress-dashboard.md file.
+    
+    Args:
+        newly_completed_count: Number of newly completed units
+        total_lessons_count: Total lessons and practice sessions completed
+        content: Content of the markdown file
+        core_lessons: Optional number of core lessons (without practice)
+        practice_sessions: Optional number of practice sessions
+        json_data: Optional session data for calculating performance metrics
+        state_data: Optional state data for calculating goal progress
+    """
+    print(f"📈 Updating stats...")
+    
+    # Validate existing content
+    completed_units_old = _validate_existing_content(content)
+    if completed_units_old is None:
+        return False
+
+    # Calculate new values using centralized calculation
+    progress = get_tracked_unit_progress(state_data, json_data)
+    
+    # Update content sections
+    content = _update_basic_stats(content, progress, total_lessons_count, core_lessons, practice_sessions)
+    content = _update_performance_metrics(content, json_data)
+    content = _update_goal_progress_section(content, progress)
+    
+    # Finalize and write
+    _finalize_and_write_content(content, newly_completed_count, total_lessons_count, core_lessons, practice_sessions)
+    
     return True

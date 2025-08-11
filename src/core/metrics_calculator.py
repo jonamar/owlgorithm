@@ -122,10 +122,8 @@ def calculate_completion_projection(state_data):
     }
 
 
-def calculate_performance_metrics(json_data):
-    """Calculate daily/weekly averages and performance metrics from lesson session data."""
-    from datetime import datetime, timedelta
-    
+def _compute_daily_stats(json_data):
+    """Compute daily statistics from session data"""
     daily_stats = defaultdict(lambda: {'lessons': 0, 'sessions': 0, 'xp': 0})
     total_lessons = 0
     total_sessions = 0
@@ -147,10 +145,13 @@ def calculate_performance_metrics(json_data):
                 daily_stats[date]['lessons'] += 1
                 total_lessons += 1
     
-    # Get date range
+    return daily_stats, total_lessons, total_sessions, total_xp
+
+def _compute_averages(daily_stats, total_lessons, total_sessions, total_xp):
+    """Compute daily and weekly averages"""
     dates = sorted([d for d in daily_stats.keys()])
     if not dates:
-        return None
+        return None, None, None, None, None, None, 0
     
     active_days = len(dates)
     daily_avg_sessions = total_sessions / active_days if active_days > 0 else 0
@@ -161,6 +162,13 @@ def calculate_performance_metrics(json_data):
     weekly_avg_sessions = daily_avg_sessions * 7
     weekly_avg_lessons = daily_avg_lessons * 7
     weekly_avg_xp = daily_avg_xp * 7
+    
+    return (daily_avg_sessions, daily_avg_lessons, daily_avg_xp,
+            weekly_avg_sessions, weekly_avg_lessons, weekly_avg_xp, active_days)
+
+def _compute_recent_performance(daily_stats):
+    """Compute recent 7-day performance metrics"""
+    from datetime import datetime, timedelta
     
     # Recent 7-day performance (last 7 calendar days, not just active days)
     today = datetime.now().date()
@@ -177,13 +185,37 @@ def calculate_performance_metrics(json_data):
     recent_avg_sessions = recent_sessions / 7
     recent_avg_xp = recent_xp / 7
     
-    # Calculate streak
+    return recent_avg_lessons, recent_avg_sessions, recent_avg_xp
+
+def _compute_streak(daily_stats):
+    """Calculate consecutive active days streak"""
+    dates = sorted([d for d in daily_stats.keys()])
     consecutive_days = 0
     for date in reversed(dates):
         if daily_stats[date]['sessions'] > 0:
             consecutive_days += 1
         else:
             break
+    return consecutive_days
+
+def calculate_performance_metrics(json_data):
+    """Calculate daily/weekly averages and performance metrics from lesson session data."""
+    # Compute daily statistics
+    daily_stats, total_lessons, total_sessions, total_xp = _compute_daily_stats(json_data)
+    
+    # Compute averages
+    result = _compute_averages(daily_stats, total_lessons, total_sessions, total_xp)
+    if result[0] is None:  # No data
+        return None
+    
+    (daily_avg_sessions, daily_avg_lessons, daily_avg_xp,
+     weekly_avg_sessions, weekly_avg_lessons, weekly_avg_xp, active_days) = result
+    
+    # Compute recent performance
+    recent_avg_lessons, recent_avg_sessions, recent_avg_xp = _compute_recent_performance(daily_stats)
+    
+    # Calculate streak
+    consecutive_days = _compute_streak(daily_stats)
     
     return {
         'daily_avg_sessions': daily_avg_sessions,
@@ -201,28 +233,8 @@ def calculate_performance_metrics(json_data):
     }
 
 
-def get_tracked_unit_progress(state_data, json_data=None):
-    """
-    Dual-mode tracked unit progress calculations.
-    
-    Uses legacy tracking for lessons 1-88 (Sections 1-4) and simplified 
-    tracking for lessons 89+ (Section 5+). Maintains historical data integrity
-    while enabling accurate projections for the new unit structure.
-    
-    Args:
-        state_data (dict): Current tracker state data (can be None for testing)
-        json_data (dict): Optional session data for unit analysis
-        
-    Returns:
-        dict: Standardized progress data for all components
-    """
-    from datetime import datetime, timedelta
-    
-    # Handle None state_data for testing/fallback scenarios
-    if state_data is None:
-        state_data = {}
-    
-    # Dual-mode tracking data
+def _calculate_dual_mode_progress(state_data):
+    """Calculate dual-mode progress (legacy + Section 5+)"""
     total_lessons = state_data.get('total_lessons_completed', 0)
     
     # Legacy tracking (Sections 1-4): lessons 1-88
@@ -237,15 +249,17 @@ def get_tracked_unit_progress(state_data, json_data=None):
     completed_units = legacy_units_completed + section5_units_completed
     
     # Calculate remaining work using new structure
-    sections_5_8_total_units = sum([cfg.SECTION_UNIT_COUNTS[i] for i in range(5, 9)])
     section5_units_remaining = cfg.SECTION_UNIT_COUNTS[5] - section5_units_completed
     sections_6_8_units = sum([cfg.SECTION_UNIT_COUNTS[i] for i in range(6, 9)])
     remaining_units = section5_units_remaining + sections_6_8_units
     
-    # Use appropriate lessons per unit for projections (simplified to Section 5+ rate)
-    lessons_per_unit = cfg.NEW_LESSONS_PER_UNIT
+    return (total_lessons, legacy_lessons, legacy_units_completed,
+            section5_lessons, section5_units_completed, completed_units, remaining_units)
+
+def _calculate_timeline_metrics():
+    """Calculate 18-month goal timeline metrics"""
+    from datetime import datetime, timedelta
     
-    # 18-month goal timeline tracking
     goal_start_date = datetime.strptime(cfg.TRACKING_START_DATE, "%Y-%m-%d")
     goal_end_date = goal_start_date + timedelta(days=cfg.GOAL_DAYS)  # 18 months
     today = datetime.now()
@@ -253,13 +267,10 @@ def get_tracked_unit_progress(state_data, json_data=None):
     days_remaining = (goal_end_date - today).days
     time_completion_percentage = (days_elapsed / cfg.GOAL_DAYS) * 100 if days_elapsed > 0 else 0
     
-    # Course completion percentage (lessons completed vs total needed)
-    total_course_lessons = cfg.TOTAL_COURSE_UNITS * cfg.NEW_LESSONS_PER_UNIT  # Using simplified unit structure
-    course_completion_percentage = (total_lessons / total_course_lessons) * 100 if total_course_lessons > 0 else 0
-    
-    # Burn rate analysis
-    total_lessons_remaining = remaining_units * lessons_per_unit
-    
+    return goal_start_date, goal_end_date, today, days_elapsed, days_remaining, time_completion_percentage
+
+def _calculate_pace_metrics(completed_units, total_lessons, remaining_units, total_lessons_remaining, days_elapsed, days_remaining):
+    """Calculate pace analysis metrics"""
     # Historical pace (actual performance since tracking started)
     if days_elapsed > 0:
         actual_units_per_day = completed_units / days_elapsed
@@ -285,7 +296,13 @@ def get_tracked_unit_progress(state_data, json_data=None):
         pace_status = "BEHIND"
         pace_status_display = f"⚠️ BEHIND by {abs(pace_difference):.1f} lessons/day"
     
-    # Projected completion
+    return (actual_units_per_day, actual_lessons_per_day, required_units_per_day,
+            required_lessons_per_day, pace_difference, pace_status_display)
+
+def _calculate_projections(total_lessons_remaining, actual_lessons_per_day, today):
+    """Calculate completion projections"""
+    from datetime import timedelta
+    
     if actual_lessons_per_day > 0:
         projected_days_total = total_lessons_remaining / actual_lessons_per_day
         projected_completion_date = today + timedelta(days=projected_days_total)
@@ -295,6 +312,51 @@ def get_tracked_unit_progress(state_data, json_data=None):
         projected_completion_date = None
         projected_months = float('inf')
         months_difference = float('inf')
+    
+    return projected_completion_date, projected_months, months_difference
+
+def get_tracked_unit_progress(state_data, json_data=None):
+    """
+    Dual-mode tracked unit progress calculations.
+    
+    Uses legacy tracking for lessons 1-88 (Sections 1-4) and simplified 
+    tracking for lessons 89+ (Section 5+). Maintains historical data integrity
+    while enabling accurate projections for the new unit structure.
+    
+    Args:
+        state_data (dict): Current tracker state data (can be None for testing)
+        json_data (dict): Optional session data for unit analysis
+        
+    Returns:
+        dict: Standardized progress data for all components
+    """
+    # Handle None state_data for testing/fallback scenarios
+    if state_data is None:
+        state_data = {}
+    
+    # Calculate dual-mode progress
+    (total_lessons, legacy_lessons, legacy_units_completed,
+     section5_lessons, section5_units_completed, completed_units, remaining_units) = _calculate_dual_mode_progress(state_data)
+    
+    # Timeline calculations
+    goal_start_date, goal_end_date, today, days_elapsed, days_remaining, time_completion_percentage = _calculate_timeline_metrics()
+    
+    # Course completion percentage
+    total_course_lessons = cfg.TOTAL_COURSE_UNITS * cfg.NEW_LESSONS_PER_UNIT
+    course_completion_percentage = (total_lessons / total_course_lessons) * 100 if total_course_lessons > 0 else 0
+    
+    # Lessons remaining calculation
+    lessons_per_unit = cfg.NEW_LESSONS_PER_UNIT
+    total_lessons_remaining = remaining_units * lessons_per_unit
+    
+    # Pace analysis
+    (actual_units_per_day, actual_lessons_per_day, required_units_per_day,
+     required_lessons_per_day, pace_difference, pace_status_display) = _calculate_pace_metrics(
+        completed_units, total_lessons, remaining_units, total_lessons_remaining, days_elapsed, days_remaining)
+    
+    # Completion projections
+    projected_completion_date, projected_months, months_difference = _calculate_projections(
+        total_lessons_remaining, actual_lessons_per_day, today)
     
     return {
         'completed_units': completed_units,

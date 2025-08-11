@@ -8,7 +8,7 @@ import os
 import json
 import time
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -178,30 +178,24 @@ class EnhancedScraper:
     # Therefore: Browser automation with update button click is REQUIRED for fresh data.
     # HTTP fallbacks create false confidence while returning stale data.
     
-    def _validate_data_quality(self, data: Dict[str, Any]) -> bool:
-        """
-        Validate the quality of scraped data.
-        
-        Args:
-            data: Scraped data to validate
-            
-        Returns:
-            True if data quality is acceptable
-        """
-        if not data or not isinstance(data, dict):
-            return False
-        
+    def _has_required_fields(self, data: Dict[str, Any]) -> Tuple[float, int]:
+        """Check for essential required fields"""
         quality_score = 0.0
         checks = 0
         
-        # Check for essential fields
         essential_fields = ['sessions', 'username', 'scraped_at']
         for field in essential_fields:
             checks += 1
             if field in data and data[field]:
                 quality_score += 1.0
         
-        # Check session data quality
+        return quality_score, checks
+    
+    def _validate_sessions_data(self, data: Dict[str, Any]) -> Tuple[float, int]:
+        """Validate session data quality and recency"""
+        quality_score = 0.0
+        checks = 0
+        
         if 'sessions' in data and isinstance(data['sessions'], list):
             sessions = data['sessions']
             checks += 1
@@ -226,14 +220,53 @@ class EnhancedScraper:
                     checks += 1
                     quality_score += 1.0
         
-        # Check computed metrics
+        return quality_score, checks
+    
+    def _validate_computed_metrics(self, data: Dict[str, Any]) -> Tuple[float, int]:
+        """Validate computed metrics are present and reasonable"""
+        quality_score = 0.0
+        checks = 0
+        
         computed_fields = ['computed_total_sessions', 'computed_lesson_count']
         for field in computed_fields:
             checks += 1
             if field in data and isinstance(data[field], (int, float)) and data[field] > 0:
                 quality_score += 1.0
         
-        final_score = quality_score / checks if checks > 0 else 0.0
+        return quality_score, checks
+    
+    def _validate_data_quality(self, data: Dict[str, Any]) -> bool:
+        """
+        Validate the quality of scraped data.
+        
+        Args:
+            data: Scraped data to validate
+            
+        Returns:
+            True if data quality is acceptable
+        """
+        if not data or not isinstance(data, dict):
+            return False
+        
+        total_quality_score = 0.0
+        total_checks = 0
+        
+        # Check required fields
+        quality_score, checks = self._has_required_fields(data)
+        total_quality_score += quality_score
+        total_checks += checks
+        
+        # Validate sessions data
+        quality_score, checks = self._validate_sessions_data(data)
+        total_quality_score += quality_score
+        total_checks += checks
+        
+        # Validate computed metrics
+        quality_score, checks = self._validate_computed_metrics(data)
+        total_quality_score += quality_score
+        total_checks += checks
+        
+        final_score = total_quality_score / total_checks if total_checks > 0 else 0.0
         
         self.logger.info(f"Data quality score: {final_score:.2f} (threshold: {self.degradation_mode.minimum_data_quality})")
         

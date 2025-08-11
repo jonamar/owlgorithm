@@ -485,126 +485,73 @@ def fetch_duome_data(username):
         print(f"Error fetching data: {e}")
         return None
 
-def parse_session_data(html_content):
-    """Parse session data from raw HTML content"""
-    soup = BeautifulSoup(html_content, 'html.parser')
+def _parse_datetime_and_xp(text):
+    """Extract datetime and XP from session text"""
+    datetime_match = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', text)
+    xp_match = re.search(r'(\d+)XP', text)
     
-    # Find all session entries (li elements)
-    session_items = soup.find_all('li')
+    if not datetime_match or not xp_match:
+        return None, None
+        
+    datetime_str = datetime_match.group(1)
+    xp = int(xp_match.group(1))
+    dt = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
     
-    sessions = []
-    unit_transitions = {}  # Track when units first appear
+    return dt, xp
+
+def _classify_session_type(text):
+    """Classify session type based on text content"""
+    text_lower = text.lower()
     
-    for item in session_items:
-        text = item.get_text(strip=True)
-        if not text or 'XP' not in text:
-            continue
-            
-        # Parse datetime and XP
-        datetime_match = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', text)
-        xp_match = re.search(r'(\d+)XP', text)
-        
-        if not datetime_match or not xp_match:
-            continue
-            
-        datetime_str = datetime_match.group(1)
-        xp = int(xp_match.group(1))
-        
-        # Parse datetime
-        dt = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
-        
-        # =================================================================
-        # LESSON COUNTING LOGIC - CORE PRINCIPLE:
-        # =================================================================
-        # ALL XP-earning sessions are lessons, regardless of type/subclass.
-        # Session types are metadata only - they do NOT affect lesson counting.
-        # This ensures no learning activity is excluded from lesson totals.
-        # =================================================================
-        
-        # CORE LESSON COUNT: Every session that earns XP is a lesson
-        is_lesson = True  # ALWAYS TRUE - all sessions count as lessons
-        
-        # METADATA ONLY: Classify session types for reporting/analysis
-        # These classifications do NOT affect whether it counts as a lesson
-        session_type = "unknown"  # Default metadata classification
-        unit = None
-        is_unit_completion = False  # Special flag for unit completion tracking
-        
-        # Classify session type for metadata purposes only
-        # CRITICAL: Only "unit review" marks unit boundaries, not all "legendary" sessions
-        if "unit review" in text.lower():
-            session_type = "unit_completion"
-            is_unit_completion = True
-        elif "legendary" in text.lower():
-            session_type = "legendary_lesson"  # Legendary within unit, not unit boundary
-        elif "personalized practice" in text:
-            session_type = "personalized_practice" 
-        elif "story /practice" in text or "story / practice" in text:
-            session_type = "story_practice"
-        elif "· lesson" in text:
-            session_type = "unit_lesson"
-            # Extract unit name from skill links for unit lessons
-            skill_links = item.find_all('a', href=re.compile(r'/skill/fr/'))
-            if skill_links:
-                href = skill_links[0]['href']
-                unit_match = re.search(r'/skill/fr/([^/]+)', href)
-                if unit_match:
-                    unit_name = unit_match.group(1).replace('-', ' ')
-                    unit = unit_name
-                    
-                    # Track unit transitions (first appearance chronologically)
-                    if unit not in unit_transitions:
-                        unit_transitions[unit] = dt
-            else:
-                # Fallback: try to extract unit name from text pattern XPUnitName
-                # Example: "102XPRequests· lesson" -> extract "Requests"
-                unit_text_match = re.search(r'\d+XP([A-Za-z]+)·', text)
-                if unit_text_match:
-                    unit_name = unit_text_match.group(1)
-                    unit = unit_name
-                    
-                    # Track unit transitions (first appearance chronologically)
-                    if unit not in unit_transitions:
-                        unit_transitions[unit] = dt
-        # Note: Even "unknown" session types count as lessons (is_lesson = True)
-        else:
-            # Look for unit name in skill links
-            skill_links = item.find_all('a', href=re.compile(r'/skill/fr/'))
-            if skill_links:
-                # Extract unit name from skill link
-                href = skill_links[0]['href']
-                unit_match = re.search(r'/skill/fr/([^/]+)', href)
-                if unit_match:
-                    unit_name = unit_match.group(1).replace('-', ' ')
-                    unit = unit_name
-                    session_type = "unit_lesson"
-                    
-                    # Track unit transitions (first appearance chronologically)
-                    if unit not in unit_transitions:
-                        unit_transitions[unit] = dt
-        
-        session = {
-            'datetime': dt.isoformat(),
-            'date': dt.date().isoformat(),
-            'time': dt.time().isoformat(),
-            'xp': xp,
-            'session_type': session_type,
-            'unit': unit,
-            'is_lesson': is_lesson,
-            'is_unit_completion': is_unit_completion,
-            'raw_text': text
-        }
-        
-        sessions.append(session)
+    if "unit review" in text_lower:
+        return "unit_completion", True
+    elif "legendary" in text_lower:
+        return "legendary_lesson", False
+    elif "personalized practice" in text:
+        return "personalized_practice", False
+    elif "story /practice" in text or "story / practice" in text:
+        return "story_practice", False
+    elif "· lesson" in text:
+        return "unit_lesson", False
+    else:
+        return "unknown", False
+
+def _extract_unit_name(item, text):
+    """Extract unit name from session item"""
+    # Try to extract from skill links first
+    skill_links = item.find_all('a', href=re.compile(r'/skill/fr/'))
+    if skill_links:
+        href = skill_links[0]['href']
+        unit_match = re.search(r'/skill/fr/([^/]+)', href)
+        if unit_match:
+            return unit_match.group(1).replace('-', ' ')
     
-    # Sort sessions chronologically (oldest first for proper unit transition detection)
-    sessions.sort(key=lambda x: x['datetime'])
+    # Fallback: extract from text pattern XPUnitName
+    unit_text_match = re.search(r'\d+XP([A-Za-z]+)·', text)
+    if unit_text_match:
+        return unit_text_match.group(1)
     
-    # Now assign units based on unit completion transitions
+    return None
+
+def _create_session_object(dt, xp, session_type, unit, is_unit_completion, text):
+    """Create a session object with normalized fields"""
+    return {
+        'datetime': dt.isoformat(),
+        'date': dt.date().isoformat(),
+        'time': dt.time().isoformat(),
+        'xp': xp,
+        'session_type': session_type,
+        'unit': unit,
+        'is_lesson': True,  # ALL sessions count as lessons
+        'is_unit_completion': is_unit_completion,
+        'raw_text': text
+    }
+
+def _assign_unit_completions(sessions):
+    """First pass: identify unit completions and their associated units"""
     current_unit = None
-    unit_completion_transitions = {}  # Track when units are completed
+    unit_completion_transitions = {}
     
-    # First pass: identify unit completions and their associated units
     for session in sessions:
         if session['unit']:  # This session has a unit name
             current_unit = session['unit']
@@ -614,7 +561,10 @@ def parse_session_data(html_content):
             unit_completion_transitions[current_unit] = session['datetime']
             print(f"Found unit completion for {current_unit} at {session['datetime']}")
     
-    # Second pass: assign practice sessions to the correct unit based on completion transitions
+    return unit_completion_transitions
+
+def _assign_practice_sessions(sessions):
+    """Second pass: assign practice sessions to correct units"""
     current_active_unit = None
     completed_units = set()
     
@@ -635,12 +585,9 @@ def parse_session_data(html_content):
             if current_active_unit and current_active_unit not in completed_units:
                 # Assign to current active unit if it's not completed yet
                 session['unit'] = current_active_unit
-            else:
-                # If no active unit or current unit is completed, 
-                # this practice belongs to the next unit (which we'll determine later)
-                pass
-    
-    # Third pass: assign remaining practice sessions to the next unit after completion
+
+def _assign_remaining_practice_sessions(sessions):
+    """Third pass: assign remaining practice sessions to next unit"""
     for i, session in enumerate(sessions):
         if session['session_type'] == 'personalized_practice' and not session['unit']:
             # Look forward to find the next unit that starts
@@ -649,6 +596,47 @@ def parse_session_data(html_content):
                 if future_session['unit'] and not future_session['is_unit_completion']:
                     session['unit'] = future_session['unit']
                     break
+
+def parse_session_data(html_content):
+    """Parse session data from raw HTML content"""
+    soup = BeautifulSoup(html_content, 'html.parser')
+    session_items = soup.find_all('li')
+    
+    sessions = []
+    unit_transitions = {}  # Track when units first appear
+    
+    # Process each session item
+    for item in session_items:
+        text = item.get_text(strip=True)
+        if not text or 'XP' not in text:
+            continue
+            
+        # Parse basic session data
+        dt, xp = _parse_datetime_and_xp(text)
+        if dt is None or xp is None:
+            continue
+        
+        # Classify session type
+        session_type, is_unit_completion = _classify_session_type(text)
+        
+        # Extract unit name if applicable
+        unit = None
+        if session_type in ["unit_lesson", "unknown"]:
+            unit = _extract_unit_name(item, text)
+            if unit and unit not in unit_transitions:
+                unit_transitions[unit] = dt
+        
+        # Create session object
+        session = _create_session_object(dt, xp, session_type, unit, is_unit_completion, text)
+        sessions.append(session)
+    
+    # Sort chronologically for unit assignment logic
+    sessions.sort(key=lambda x: x['datetime'])
+    
+    # Multi-pass unit assignment
+    _assign_unit_completions(sessions)
+    _assign_practice_sessions(sessions)
+    _assign_remaining_practice_sessions(sessions)
     
     # Sort back to newest first for output
     sessions.sort(key=lambda x: x['datetime'], reverse=True)
@@ -693,47 +681,21 @@ def calculate_total_lessons(sessions):
     return len(sessions)
 
 
-def calculate_recent_lessons_per_unit(sessions):
-    """
-    Calculate lessons per unit using Algorithm 1: "First Mention = Unit Start" with Sub-unit Folding.
-    
-    CRITICAL CONSTRAINTS (see docs/claude.md Algorithm 1 Specifications):
-    - Hard-coded start date: 2025-06-19 (Nightmare unit start - first complete unit)
-    - Exclude incomplete units: On Sale (no reliable start), current active unit
-    - Target validation: Requests = 34 lessons, Grooming+Reflexives = 39 lessons
-    
-    Algorithm:
-    1. Filter to complete unit date range (2025-06-19 onwards)
-    2. Detect unit boundaries by first mention of unit name (chronologically)
-    3. Assign ALL XP-earning sessions to the currently active unit
-    4. Fold small units (<8 lessons) into adjacent units when appropriate
-    5. Exclude current incomplete unit and units without reliable starts
-    
-    Returns:
-        dict: {
-            'average_lessons_per_unit': float,
-            'completed_units_analyzed': int,
-            'unit_analysis': list of dicts with unit data,
-            'algorithm': 'first_mention_with_folding'
-        }
-    """
-    if not sessions:
-        return None
-    
-    # HARD-CODED CONSTRAINT: Only analyze data from first complete unit (Nightmare) onwards
+def _filter_sessions_by_date(sessions):
+    """Filter sessions to analysis date range"""
     filtered_sessions = [s for s in sessions if s['date'] >= cfg.ANALYSIS_START_DATE]
     
     print(f"📊 Algorithm 1 constraints: Using sessions from {cfg.ANALYSIS_START_DATE} onwards")
     print(f"📊 Filtered {len(sessions)} → {len(filtered_sessions)} sessions for analysis")
     
-    # Sort sessions chronologically (oldest first) for proper unit detection
-    sorted_sessions = sorted(filtered_sessions, key=lambda x: x['datetime'])
-    
-    # Step 1: Detect unit boundaries by first mention
+    return sorted(filtered_sessions, key=lambda x: x['datetime'])
+
+def _detect_unit_boundaries(sessions):
+    """Detect unit boundaries by first mention"""
     unit_boundaries = []
     seen_units = set()
     
-    for session in sorted_sessions:
+    for session in sessions:
         if session.get('unit') and session['unit'] not in seen_units:
             seen_units.add(session['unit'])
             unit_boundaries.append({
@@ -742,26 +704,27 @@ def calculate_recent_lessons_per_unit(sessions):
             })
             print(f"📊 Unit boundary detected: {session['unit']} starts at {session['datetime']}")
     
-    if len(unit_boundaries) < 2:
-        print(f"⚠️ Need at least 2 units for analysis, found {len(unit_boundaries)}")
-        return None
-    
-    # Step 2: Assign ALL sessions to units based on chronological active unit
+    return unit_boundaries
+
+def _assign_sessions_to_units(sessions):
+    """Assign all sessions to units based on chronological active unit"""
     unit_session_counts = defaultdict(int)
     current_unit = None
     
-    for session in sorted_sessions:
+    for session in sessions:
         # Update current unit if this session has an explicit unit
         if session.get('unit'):
             current_unit = session['unit']
         
-        # CRITICAL FIX: Assign unit to session object AND count it
+        # Assign unit to session object and count it
         if current_unit:
-            # Update session metadata with assigned unit (for data integrity)
             session['assigned_unit'] = current_unit
             unit_session_counts[current_unit] += 1
     
-    # Step 3: Exclude incomplete units (current unit + units without reliable starts)
+    return unit_session_counts
+
+def _filter_completed_units(unit_session_counts, unit_boundaries):
+    """Exclude incomplete units"""
     unit_sequence = [b['unit'] for b in unit_boundaries]
     EXCLUDED_UNITS = {'On Sale'}  # Units without reliable start points
     
@@ -769,13 +732,15 @@ def calculate_recent_lessons_per_unit(sessions):
         current_unit_name = unit_sequence[-1]
         excluded_units = EXCLUDED_UNITS | {current_unit_name}
         print(f"📊 Excluding incomplete units: {excluded_units}")
-        completed_units = {unit: count for unit, count in unit_session_counts.items() 
-                          if unit not in excluded_units}
+        return {unit: count for unit, count in unit_session_counts.items() 
+                if unit not in excluded_units}
     else:
-        completed_units = {unit: count for unit, count in unit_session_counts.items() 
-                          if unit not in EXCLUDED_UNITS}
-    
-    # Step 4: Apply sub-unit folding for small units
+        return {unit: count for unit, count in unit_session_counts.items() 
+                if unit not in EXCLUDED_UNITS}
+
+def _apply_subunit_folding(completed_units, unit_boundaries):
+    """Apply sub-unit folding for small units"""
+    unit_sequence = [b['unit'] for b in unit_boundaries]
     final_unit_counts = {}
     folded_units = set()
     
@@ -804,16 +769,10 @@ def calculate_recent_lessons_per_unit(sessions):
         else:
             final_unit_counts[unit] = lesson_count
     
-    if not final_unit_counts:
-        print("⚠️ No completed units found for analysis")
-        return None
-    
-    # Calculate average
-    total_lessons = sum(final_unit_counts.values())
-    num_units = len(final_unit_counts)
-    average_lessons_per_unit = total_lessons / num_units
-    
-    # Step 5: Build unit analysis details
+    return final_unit_counts
+
+def _build_unit_analysis(final_unit_counts, unit_boundaries):
+    """Build detailed unit analysis"""
     unit_analysis = []
     for unit, lesson_count in final_unit_counts.items():
         # Find start date for this unit
@@ -829,6 +788,64 @@ def calculate_recent_lessons_per_unit(sessions):
             'start_date': start_date or 'Unknown',
             'algorithm': 'first_mention_with_folding'
         })
+    
+    return unit_analysis
+
+def calculate_recent_lessons_per_unit(sessions):
+    """
+    Calculate lessons per unit using Algorithm 1: "First Mention = Unit Start" with Sub-unit Folding.
+    
+    CRITICAL CONSTRAINTS (see docs/claude.md Algorithm 1 Specifications):
+    - Hard-coded start date: 2025-06-19 (Nightmare unit start - first complete unit)
+    - Exclude incomplete units: On Sale (no reliable start), current active unit
+    - Target validation: Requests = 34 lessons, Grooming+Reflexives = 39 lessons
+    
+    Algorithm:
+    1. Filter to complete unit date range (2025-06-19 onwards)
+    2. Detect unit boundaries by first mention of unit name (chronologically)
+    3. Assign ALL XP-earning sessions to the currently active unit
+    4. Fold small units (<8 lessons) into adjacent units when appropriate
+    5. Exclude current incomplete unit and units without reliable starts
+    
+    Returns:
+        dict: {
+            'average_lessons_per_unit': float,
+            'completed_units_analyzed': int,
+            'unit_analysis': list of dicts with unit data,
+            'algorithm': 'first_mention_with_folding'
+        }
+    """
+    if not sessions:
+        return None
+    
+    # Step 1: Filter and sort sessions
+    sorted_sessions = _filter_sessions_by_date(sessions)
+    
+    # Step 2: Detect unit boundaries
+    unit_boundaries = _detect_unit_boundaries(sorted_sessions)
+    if len(unit_boundaries) < 2:
+        print(f"⚠️ Need at least 2 units for analysis, found {len(unit_boundaries)}")
+        return None
+    
+    # Step 3: Assign sessions to units
+    unit_session_counts = _assign_sessions_to_units(sorted_sessions)
+    
+    # Step 4: Filter completed units
+    completed_units = _filter_completed_units(unit_session_counts, unit_boundaries)
+    
+    # Step 5: Apply folding
+    final_unit_counts = _apply_subunit_folding(completed_units, unit_boundaries)
+    
+    if not final_unit_counts:
+        print("⚠️ No completed units found for analysis")
+        return None
+    
+    # Step 6: Calculate average and build analysis
+    total_lessons = sum(final_unit_counts.values())
+    num_units = len(final_unit_counts)
+    average_lessons_per_unit = total_lessons / num_units
+    
+    unit_analysis = _build_unit_analysis(final_unit_counts, unit_boundaries)
     
     print(f"📊 Algorithm 1 unit analysis complete:")
     print(f"   Detected {len(unit_boundaries)} unit boundaries")
