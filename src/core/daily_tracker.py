@@ -136,6 +136,24 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
         print(f"⏳ No data changes - notification throttled (next in {minutes_remaining} minutes)")
         return False
     
+    # Double-check throttling just before sending to prevent race conditions
+    # Re-read the current state from disk to get the most recent timestamp
+    try:
+        from data.repository import AtomicJSONRepository
+        temp_repo = AtomicJSONRepository(cfg.STATE_FILE)
+        current_state = temp_repo.load({})
+        current_last_notification = current_state.get('last_notification_timestamp')
+        
+        # If timestamp changed since we loaded, re-check throttling
+        if current_last_notification != last_notification_time:
+            should_throttle_recheck, _ = _should_throttle_notification(current_last_notification, has_data_changes)
+            if should_throttle_recheck:
+                print("⏳ Notification already sent by another process - skipping")
+                return False
+    except Exception as e:
+        # If re-check fails, continue with original decision to be safe
+        print(f"⚠️ Could not re-check notification state: {e}")
+    
     # Send notification
     daily_progress = calculate_daily_progress(state_data)
     total_lessons = state_data.get('computed_total_sessions', 0)

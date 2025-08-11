@@ -102,7 +102,7 @@ class PushoverNotifier:
             
             result = response.json()
             if result.get('status') == 1:
-                print("📱 Push notification sent successfully!")
+                # Success logging handled by caller for better context
                 return True
             else:
                 print(f"❌ Pushover API error: {result.get('errors', 'Unknown error')}")
