@@ -94,13 +94,19 @@ def _should_throttle_notification(last_notification_time, has_data_changes):
     Returns:
         tuple: (should_throttle, minutes_remaining)
     """
-    if has_data_changes or not last_notification_time:
+    # When there are data changes, still enforce a short throttle (30 minutes)
+    # When there are no changes, enforce the longer throttle window from cfg (default 2.5 hours)
+    if not last_notification_time:
         return False, 0
     
     try:
         last_time = datetime.fromisoformat(last_notification_time)
         time_diff = datetime.now() - last_time
-        throttle_duration = timedelta(hours=getattr(cfg, 'NOTIFICATION_THROTTLE_HOURS', 2.5))
+        # Choose throttle duration based on whether there are data changes
+        if has_data_changes:
+            throttle_duration = timedelta(minutes=30)
+        else:
+            throttle_duration = timedelta(hours=getattr(cfg, 'NOTIFICATION_THROTTLE_HOURS', 2.5))
         
         if time_diff < throttle_duration:
             time_remaining = throttle_duration - time_diff
@@ -158,7 +164,7 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
     daily_progress = calculate_daily_progress(state_data)
     total_lessons = state_data.get('computed_total_sessions', 0)
     
-    notifier.send_simple_notification(
+    send_ok = notifier.send_simple_notification(
         daily_progress=daily_progress,
         units_completed=units_completed,
         total_lessons=total_lessons,
@@ -166,16 +172,18 @@ def send_time_based_notification(notifier, time_slot, state_data, has_new_lesson
         json_data=json_data
     )
     
-    # Update notification timestamp
-    state_data['last_notification_timestamp'] = current_timestamp
-    
-    # Log success
-    change_status = "with data changes" if has_data_changes else "after throttle period"
-    print(f"📱 Push notification sent successfully ({change_status})!")
+    # Update notification timestamp only on success
+    if send_ok:
+        state_data['last_notification_timestamp'] = current_timestamp
+        # Log success
+        change_status = "with data changes" if has_data_changes else "after throttle period"
+        print(f"📱 Push notification sent successfully ({change_status})!")
+    else:
+        print("❌ Notification send failed; timestamp not updated.")
     
     try:
         if logger:
-            logger.external_call("notification", "sent_unified", success=True)
+            logger.external_call("notification", "sent_unified", success=bool(send_ok))
     except: 
         pass
     

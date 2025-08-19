@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import fcntl
 
 # Ensure project root & src are on path (needed when the script is executed
 # from an arbitrary working directory or via cron).
@@ -40,7 +41,20 @@ def main() -> None:
     if args.username != cfg.USERNAME:
         cfg.USERNAME = args.username
 
-    tracker_main()
+    # Single-instance lock to prevent overlapping runs (cron/manual)
+    lock_path = "/tmp/owlgorithm_daily_tracker.lock"
+    # Ensure the lock file exists and acquire a non-blocking exclusive lock
+    with open(lock_path, "w") as lock_file:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_file.write(str(os.getpid()))
+            lock_file.flush()
+        except BlockingIOError:
+            print("⚠️ Another owlgorithm daily update is already running. Skipping this run.")
+            return
+
+        # Run the tracker while holding the lock
+        tracker_main()
 
 
 if __name__ == "__main__":
