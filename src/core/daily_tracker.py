@@ -311,25 +311,44 @@ def _run_scraper_and_load_data():
         
     return json_data, latest_json_path
 
-def _analyze_changes(json_data, state_data):
-    """Analyze what has changed since last run"""
-    # Check for changes
-    newly_completed, all_completed_in_json, has_new_sessions = get_newly_completed_units(json_data, state_data)
-    
-    # Get the current scrape timestamp
-    current_scrape_date = json_data.get('scraped_at', datetime.now().isoformat())[:10]  # Keep just the date part
-    
-    # Switch to computed totals (more accurate than duome's reported lessons)
-    new_total_lessons = json_data.get('computed_total_sessions', 0)  # Use computed_total_sessions (lessons + practice)
-    new_core_lessons = json_data.get('computed_lesson_count', 0)  # Core lessons only
-    new_practice_sessions = json_data.get('computed_practice_count', 0)  # Practice sessions only
-    
-    # Track both old metrics for backwards compatibility
-    old_total_lessons = state_data.get('total_lessons_completed', 0)  # Legacy field
-    old_computed_total = state_data.get('computed_total_sessions', 0)  # New computed field
-    
-    return (newly_completed, all_completed_in_json, has_new_sessions, current_scrape_date,
-            new_total_lessons, new_core_lessons, new_practice_sessions, old_computed_total)
+def _analyze_changes(previous_json_content, current_json_content, state_data):
+    """Analyzes if there are meaningful changes between scrapes."""
+    # Default to no changes
+    has_data_changes = False
+    has_new_lessons = False
+    has_new_units = False
+
+    if not current_json_content:
+        return False, False, False
+
+    try:
+        current_data = json.loads(current_json_content)
+        previous_data = json.loads(previous_json_content) if previous_json_content else {}
+    except json.JSONDecodeError:
+        # If new JSON is invalid, no changes. If old is invalid, any new valid data is a change.
+        return False, False, bool(current_json_content)
+
+    # 1. Compare total session count for new lessons
+    previous_total_lessons = previous_data.get('computed_total_sessions', 0)
+    current_total_lessons = current_data.get('computed_total_sessions', 0)
+    if current_total_lessons > previous_total_lessons:
+        has_new_lessons = True
+
+    # 2. Compare set of completed units for new unit completions
+    previous_units = set(previous_data.get('completed_units', []))
+    current_units = set(current_data.get('completed_units', []))
+    if current_units - previous_units:
+        has_new_units = True
+
+    # 3. Overall data change is true if any meaningful metric changed
+    has_data_changes = has_new_lessons or has_new_units
+
+    # For backward compatibility, do a full content check if no other changes found
+    if not has_data_changes:
+        if previous_json_content != current_json_content:
+            print("💡 Trivial data change detected (no new lessons/units), ignoring for notification.")
+
+    return has_new_lessons, has_new_units, has_data_changes
 
 def _reconcile_state_data(json_data, state_data, new_total_lessons, old_computed_total):
     """Handle state reconciliation and detect changes"""

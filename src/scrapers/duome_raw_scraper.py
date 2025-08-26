@@ -284,8 +284,7 @@ def fetch_duome_data_with_update(username, headless=True):
         # Check for timestamp before attempting click
         timestamp_before = None
         try:
-            timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/parent::*")
-            timestamp_before = timestamp_element.text if timestamp_element else None
+            timestamp_before = extract_duome_timestamp(driver)
             print(f"Timestamp before update: {timestamp_before}")
         except (NoSuchElementException, AttributeError):
             print("Could not find timestamp element before update")
@@ -331,18 +330,25 @@ def fetch_duome_data_with_update(username, headless=True):
         if not update_clicked:
             print("Update button not found or not clickable")
             print("Proceeding with current page data")
-            
-        # Give additional time for the update to complete
-        print("Allowing time for stats update to complete...")
-        time.sleep(DEFAULT_SCRAPE_DELAY)  # Wait time for update to process
-        
-        # Verify the update by checking for timestamp
-        try:
-            timestamp_element = driver.find_element(By.XPATH, "//text()[contains(., 'Last update:')]/following-sibling::*[1]")
-            current_timestamp = timestamp_element.text if timestamp_element else "Unknown"
-            print(f"Current page timestamp: {current_timestamp}")
-        except (NoSuchElementException, AttributeError):
-            print("Could not find timestamp element (this is normal for some page layouts)")
+        else:
+            # Intelligent wait: poll for timestamp change after clicking update
+            print("Waiting for Duome to update stats...")
+            max_wait_seconds = 30
+            poll_interval_seconds = 3
+            wait_start_time = time.time()
+            update_verified = False
+
+            while time.time() - wait_start_time < max_wait_seconds:
+                timestamp_after = extract_duome_timestamp(driver)
+                if timestamp_after and timestamp_after != timestamp_before:
+                    print(f"✅ Update verified. New timestamp: {timestamp_after}")
+                    update_verified = True
+                    break
+                print(f"  ... still waiting (current timestamp: {timestamp_after})")
+                time.sleep(poll_interval_seconds)
+
+            if not update_verified:
+                print("⚠️ Timed out waiting for timestamp to change. Proceeding with potentially stale data.")
         
         # Get the page source after potential update
         print("Extracting page data...")
