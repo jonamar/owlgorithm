@@ -6,6 +6,7 @@ Tests markdown file parsing, regex patterns, and content updates.
 import pytest
 import tempfile
 import os
+from datetime import datetime
 from unittest.mock import patch, mock_open
 from src.core.markdown_updater import update_markdown_file
 
@@ -113,7 +114,8 @@ class TestMarkdownUpdater:
             assert "**Total Lessons Completed**: 200" in written_content
             # Note: Core/Practice breakdown insertion needs debugging
             # assert "(Core: 60, Practice: 140)" in written_content
-            assert "July 06, 2025" in written_content  # Updated to current date
+            expected_date = datetime.now().strftime('%B %d, %Y')
+            assert expected_date in written_content  # Updated to current date
     
     def test_update_markdown_without_optional_data(self, sample_markdown_content):
         """Test markdown update without optional session/state data"""

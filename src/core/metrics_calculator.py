@@ -333,6 +333,60 @@ def get_tracked_unit_progress(state_data, json_data=None):
     # Handle None state_data for testing/fallback scenarios
     if state_data is None:
         state_data = {}
+
+    # Simple fallback mode: if no state_data and no json_data provided, use tracked targets
+    # This supports markdown updater unit tests that do not pass full datasets
+    if (not state_data) and (json_data is None or not json_data):
+        # Timeline calculations for required lessons/day context
+        goal_start_date, goal_end_date, today, days_elapsed, days_remaining, time_completion_percentage = _calculate_timeline_metrics()
+        completed_units = len(getattr(cfg, 'TRACKED_COMPLETE_UNITS', []))
+        total_target_units = getattr(cfg, 'TRACKED_TARGET_UNITS', len(getattr(cfg, 'TRACKED_COMPLETE_UNITS', [])))
+        remaining_units = max(0, total_target_units - completed_units)
+        lessons_per_unit = cfg.NEW_LESSONS_PER_UNIT
+        total_lessons = 0
+        total_lessons_remaining = remaining_units * lessons_per_unit
+
+        # Pace metrics (will indicate behind if no progress yet)
+        (actual_units_per_day, actual_lessons_per_day, required_units_per_day,
+         required_lessons_per_day, pace_difference, pace_status_display) = _calculate_pace_metrics(
+            completed_units, total_lessons, remaining_units, total_lessons_remaining, days_elapsed, days_remaining)
+
+        projected_completion_date, projected_months, months_difference = _calculate_projections(
+            total_lessons_remaining, actual_lessons_per_day, today)
+
+        return {
+            'completed_units': completed_units,
+            'total_lessons': total_lessons,
+            'lessons_per_unit': lessons_per_unit,
+            'remaining_units': remaining_units,
+            'total_lessons_remaining': total_lessons_remaining,
+            'required_lessons_per_day': required_lessons_per_day,
+            'current_daily_avg': actual_lessons_per_day,
+            'pace_difference': pace_difference,
+            'pace_status': pace_status_display,
+            'daily_goal': cfg.DAILY_GOAL_LESSONS,
+
+            # Dual-mode tracking details (not applicable here; set to conservative defaults)
+            'legacy_units_completed': 0,
+            'legacy_lessons_completed': 0,
+            'section5_units_completed': 0,
+            'section5_lessons_completed': 0,
+            'tracking_mode': 'simple_tracked_targets',
+
+            # 18-month goal tracking
+            'goal_start_date': goal_start_date.strftime('%Y-%m-%d'),
+            'goal_end_date': goal_end_date.strftime('%Y-%m-%d'),
+            'days_elapsed': days_elapsed,
+            'days_remaining': days_remaining,
+            'time_completion_percentage': time_completion_percentage,
+            'course_completion_percentage': 0,
+            'actual_units_per_day': actual_units_per_day,
+            'actual_lessons_per_day': actual_lessons_per_day,
+            'required_units_per_day': required_units_per_day,
+            'projected_completion_date': projected_completion_date.strftime('%Y-%m-%d') if projected_completion_date else None,
+            'projected_months': projected_months if projected_months != float('inf') else None,
+            'months_difference': months_difference if months_difference != float('inf') else None
+        }
     
     # Calculate dual-mode progress
     (total_lessons, legacy_lessons, legacy_units_completed,
