@@ -116,54 +116,59 @@ class PushoverNotifier:
             return False
 
     def _format_notification_message(self, daily_progress, state_data=None, json_data=None):
-        """Format the simplified 3-line notification message with visual progress tracker."""
+        """Format the 3-line notification message (pure function for easy testing)."""
         from core.metrics_calculator import get_tracked_unit_progress, calculate_performance_metrics
         from datetime import datetime
         
         completed = daily_progress['completed']
-        # Fixed goal of 12 lessons per day
-        daily_goal = 12
         
-        # Create visual progress tracker
-        progress_visual = self._create_progress_visual(completed, daily_goal)
+        if not state_data:
+            goal = daily_progress['goal']
+            pct = int(daily_progress['progress_pct'])
+            return f"{completed} / {goal} lessons ({pct}%)\nweek avg: calculating...\nfinish: calculating..."
+        
+        # Get dynamic calculations
+        progress = get_tracked_unit_progress(state_data)
+        required_pace = progress['required_lessons_per_day']
+        pct = int((completed / required_pace) * 100) if required_pace > 0 else 0
         
         # Weekly average (lessons per day)
         weekly_avg = 0
         if json_data:
             perf_metrics = calculate_performance_metrics(json_data)
             if perf_metrics:
-                weekly_avg = perf_metrics['recent_avg_lessons']
+                weekly_avg = perf_metrics['recent_avg_lessons']  # Use lessons, not sessions
         
-        # Finish date with simplified formatting
+        # Finish date with robust formatting
         finish_line = "finish: calculating..."
-        if state_data:
-            progress = get_tracked_unit_progress(state_data)
-            projected_date = progress.get('projected_completion_date')
-            
-            if projected_date:
-                try:
-                    date_obj = datetime.strptime(projected_date, '%Y-%m-%d')
-                    formatted_date = date_obj.strftime('%b %d, %Y')
-                    finish_line = f"finish: {formatted_date}"
-                except (ValueError, TypeError):
-                    finish_line = f"finish: {projected_date}"
+        projected_date = progress.get('projected_completion_date')
+        months_diff = progress.get('months_difference')
         
-        # Build 3-line message
-        line1 = f"Progress: {progress_visual}  ({completed}/{daily_goal})"
-        line2 = f"week avg: {weekly_avg:.1f}/day" if weekly_avg > 0 else "week avg: calculating..."
+        if projected_date and months_diff is not None:
+            try:
+                date_obj = datetime.strptime(projected_date, '%Y-%m-%d')
+                formatted_date = date_obj.strftime('%b %d, %Y')
+                
+                if abs(months_diff) < 0.1:
+                    timing = "on time"
+                elif months_diff < 0:
+                    timing = f"{abs(months_diff):.1f} mo early"
+                else:
+                    timing = f"{months_diff:.1f} mo late"
+                
+                finish_line = f"finish: {formatted_date} ({timing})"
+            except (ValueError, TypeError):
+                finish_line = f"finish: {projected_date}"
+        
+        # Course completion percentage
+        course_progress_pct = progress.get('course_completion_percentage', 0)
+        
+        # Build 3-line message with course completion percentage
+        line1 = f"{completed} / {required_pace:.1f} lessons ({pct}% daily)"
+        line2 = f"course: {course_progress_pct:.1f}% • week avg: {weekly_avg:.1f}/day" if weekly_avg > 0 else f"course: {course_progress_pct:.1f}% • week avg: calculating..."
         line3 = finish_line
         
         return f"{line1}\n{line2}\n{line3}"
-    
-    def _create_progress_visual(self, completed, goal):
-        """Create visual progress tracker with checkmarks and dashes."""
-        visual = ""
-        for i in range(goal):
-            if i < completed:
-                visual += "✓ "
-            else:
-                visual += "- "
-        return visual.rstrip()  # Remove trailing space
 
     def send_simple_notification(self, daily_progress, state_data=None, json_data=None, **kwargs):
         """Send enhanced 3-line notification with dynamic pace and finish date."""

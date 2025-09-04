@@ -8,7 +8,7 @@
 
 - **📊 Accurate Progress Tracking**: Counts ALL learning activities (lessons, practice, stories, reviews)
 - **🤖 Fully Automated**: Scrapes progress every 30 minutes with zero manual intervention
-- **📱 Smart Notifications**: Time-appropriate push alerts via Pushover
+- **📱 Smart Notifications**: Visual progress tracker with time-appropriate push alerts via Pushover
 - **📈 Goal Analytics**: Track pace, burn rate, and completion projections
 - **🔒 Privacy-First**: All data stays local on your machine
 
@@ -69,6 +69,22 @@ Owlgorithm follows user-focused versioning:
 - **No forced cadence**: Updates happen when they're worth your time, not on artificial schedules
 
 **Current Version**: See [VERSION](VERSION) file and [CHANGELOG.md](CHANGELOG.md) for latest improvements.
+
+## 📱 Notification Format
+
+The system sends clean, visual progress notifications with a fixed daily goal of 12 lessons:
+
+```
+📊 Duolingo Progress
+
+Progress: ✓ ✓ ✓ - - - - - - - - -  (3/12)
+week avg: 8.5/day
+finish: Mar 15, 2026
+```
+
+- **Line 1**: Visual progress tracker with checkmarks (✓) for completed lessons and dashes (-) for remaining
+- **Line 2**: Weekly average lessons per day
+- **Line 3**: Projected completion date
 
 ## 📚 Documentation
 
