@@ -95,7 +95,20 @@ def _should_throttle_notification(last_notification_time, has_data_changes):
     Returns:
         tuple: (should_throttle, minutes_remaining)
     """
-    # If there are data changes, bypass throttling entirely
+    # Always enforce minimum 20-minute interval to prevent rapid duplicates
+    if last_notification_time:
+        try:
+            last_time = datetime.fromisoformat(last_notification_time)
+            time_diff = datetime.now() - last_time
+            min_interval = timedelta(minutes=20)
+            
+            if time_diff < min_interval:
+                minutes_remaining = int((min_interval - time_diff).total_seconds() / 60)
+                return True, minutes_remaining
+        except (ValueError, TypeError):
+            pass  # Handle below with existing error handling
+    
+    # If there are data changes, bypass longer throttling (but not minimum interval above)
     # When there are no changes, enforce the longer throttle window from cfg (default 2.5 hours)
     if has_data_changes:
         return False, 0

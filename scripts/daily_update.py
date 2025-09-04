@@ -43,18 +43,23 @@ def main() -> None:
 
     # Single-instance lock to prevent overlapping runs (cron/manual)
     lock_path = "/tmp/owlgorithm_daily_tracker.lock"
-    # Ensure the lock file exists and acquire a non-blocking exclusive lock
-    with open(lock_path, "w") as lock_file:
-        try:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            lock_file.write(str(os.getpid()))
-            lock_file.flush()
-        except BlockingIOError:
-            print("⚠️ Another owlgorithm daily update is already running. Skipping this run.")
-            return
-
+    
+    # Open lock file and hold it for the entire execution
+    lock_file = open(lock_path, "w")
+    try:
+        # Try to acquire non-blocking exclusive lock
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lock_file.write(str(os.getpid()))
+        lock_file.flush()
+        
         # Run the tracker while holding the lock
         tracker_main()
+        
+    except BlockingIOError:
+        print("⚠️ Another owlgorithm daily update is already running. Skipping this run.")
+    finally:
+        # Always close and release the lock
+        lock_file.close()
 
 
 if __name__ == "__main__":
