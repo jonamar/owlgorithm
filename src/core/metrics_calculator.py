@@ -300,11 +300,17 @@ def _calculate_pace_metrics(completed_units, total_lessons, remaining_units, tot
             required_lessons_per_day, pace_difference, pace_status_display)
 
 def _calculate_projections(total_lessons_remaining, actual_lessons_per_day, today):
-    """Calculate completion projections"""
+    """Calculate completion projections using daily goal as pace (more realistic than historical average)"""
     from datetime import timedelta
+    from config import app_config as cfg
     
-    if actual_lessons_per_day > 0:
-        projected_days_total = total_lessons_remaining / actual_lessons_per_day
+    # Use daily goal (12 lessons/day) instead of historical average for projections
+    # Historical average includes many zero-lesson days and gives unrealistic projections
+    daily_goal = getattr(cfg, 'DAILY_GOAL_LESSONS', 12)
+    projection_pace = daily_goal
+    
+    if projection_pace > 0:
+        projected_days_total = total_lessons_remaining / projection_pace
         projected_completion_date = today + timedelta(days=projected_days_total)
         projected_months = projected_days_total / 30.44  # avg days per month
         months_difference = projected_months - 18

@@ -1,14 +1,14 @@
 # 🦉 Owlgorithm: Automated Duolingo Progress Tracker
 
-**Complete automated progress tracking system for Duolingo with real-time analytics, smart notifications, and goal management.**
+**Complete automated progress tracking system for Duolingo with real-time analytics, simple reminders, and goal management.**
 
 > 🎯 **Current Focus**: French course (272 units) with 18-month completion goal
 
 ## ✨ Key Features
 
 - **📊 Accurate Progress Tracking**: Counts ALL learning activities (lessons, practice, stories, reviews)
-- **🤖 Fully Automated**: Scrapes progress every 30 minutes with zero manual intervention
-- **📱 Smart Notifications**: Visual progress tracker with time-appropriate push alerts via Pushover
+- **🤖 Automated**: Scrape-on-demand, with a simple morning reminder window
+- **📱 Simple Notifications**: Short Pushover reminders sent at fixed times (08:30–12:00)
 - **📈 Goal Analytics**: Track pace, burn rate, and completion projections
 - **🔒 Privacy-First**: All data stays local on your machine
 
@@ -35,8 +35,8 @@ The setup guide includes:
 1. **Scrapes** fresh data from duome.eu using headless Firefox
 2. **Processes** lesson data with professional-grade algorithms
 3. **Calculates** progress toward your completion goal
-4. **Notifies** you with smart, time-appropriate messages
-5. **Updates** your progress dashboard automatically
+4. **Sends** simple morning reminders independent of scraping
+5. **Updates** your progress dashboard
 
 ## 🔄 Dual-Mode Tracking System
 
@@ -70,21 +70,11 @@ Owlgorithm follows user-focused versioning:
 
 **Current Version**: See [VERSION](VERSION) file and [CHANGELOG.md](CHANGELOG.md) for latest improvements.
 
-## 📱 Notification Format
+## 📱 Notification Behavior
 
-The system sends clean, visual progress notifications with a fixed daily goal of 12 lessons:
-
-```
-📊 Duolingo Progress
-
-Progress: ✓ ✓ ✓ - - - - - - - - -  (3/12)
-week avg: 8.5/day
-finish: Mar 15, 2026
-```
-
-- **Line 1**: Visual progress tracker with checkmarks (✓) for completed lessons and dashes (-) for remaining
-- **Line 2**: Weekly average lessons per day
-- **Line 3**: Projected completion date
+Notifications are intentionally simple and fixed-time:
+- Sent at 08:30, every 30 minutes through 12:00 (08:30, 09:00, 09:30, 10:00, 10:30, 11:00, 11:30, 12:00)
+- Content is a short reminder message (customize in `scripts/send_simple_notification.py`)
 
 ## 📚 Documentation
 

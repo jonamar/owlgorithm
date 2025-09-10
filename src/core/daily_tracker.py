@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..')))      # /src
 sys.path.insert(0, os.path.abspath(os.path.join(current_dir, '..', '..')))  # project root
 import glob
 from datetime import datetime, timedelta
-from notifiers.pushover_notifier import PushoverNotifier
+# Notification sending is no longer handled here; see scripts/send_simple_notification.py
 
 # --- Configuration (centralised) ---
 from config import app_config as cfg
@@ -27,7 +27,6 @@ from config import app_config as cfg
 from .metrics_calculator import (
     count_todays_lessons,
     calculate_daily_lesson_goal, 
-    calculate_daily_progress,
     calculate_performance_metrics
 )
 from .markdown_updater import update_markdown_file
@@ -84,129 +83,6 @@ def reset_daily_lessons_if_needed(state_data, json_data=None):
 
 # Metrics calculation functions moved to metrics_calculator.py
 
-def _should_throttle_notification(last_notification_time, has_data_changes):
-    """
-    Determine if notification should be throttled based on last timestamp and data changes.
-    
-    Args:
-        last_notification_time (str|None): ISO timestamp of last notification
-        has_data_changes (bool): Whether data changes were detected
-        
-    Returns:
-        tuple: (should_throttle, minutes_remaining)
-    """
-    # Always enforce minimum 20-minute interval to prevent rapid duplicates
-    if last_notification_time:
-        try:
-            last_time = datetime.fromisoformat(last_notification_time)
-            time_diff = datetime.now() - last_time
-            min_interval = timedelta(minutes=20)
-            
-            if time_diff < min_interval:
-                minutes_remaining = int((min_interval - time_diff).total_seconds() / 60)
-                return True, minutes_remaining
-        except (ValueError, TypeError):
-            pass  # Handle below with existing error handling
-    
-    # If there are data changes, bypass longer throttling (but not minimum interval above)
-    # When there are no changes, enforce the longer throttle window from cfg (default 2.5 hours)
-    if has_data_changes:
-        return False, 0
-    if not last_notification_time:
-        return False, 0
-    
-    try:
-        last_time = datetime.fromisoformat(last_notification_time)
-        time_diff = datetime.now() - last_time
-        # No data changes: use longer throttle duration
-        throttle_duration = timedelta(hours=getattr(cfg, 'NOTIFICATION_THROTTLE_HOURS', 2.5))
-        
-        if time_diff < throttle_duration:
-            time_remaining = throttle_duration - time_diff
-            minutes_remaining = int(time_remaining.total_seconds() / 60)
-            return True, minutes_remaining
-            
-    except (ValueError, TypeError) as e:
-        # Handle corrupted/malformed timestamps gracefully
-        print(f"⚠️  Invalid notification timestamp format: {last_notification_time}")
-        if logger:
-            logger.external_call("notification", "invalid_timestamp", success=False, error=str(e))
-    
-    return False, 0
-
-def send_time_based_notification(notifier, time_slot, state_data, has_new_lessons, has_new_units, units_completed, json_data):
-    """Send simplified notification - with configurable throttling when no data changes."""
-    # Ensure state_data is a dict
-    if state_data is None:
-        state_data = {}
-    
-    # Check if we have any data changes
-    has_data_changes = has_new_lessons or has_new_units
-    
-    # Get current timestamp once
-    current_time = datetime.now()
-    current_timestamp = current_time.isoformat()
-    
-    # Check throttling logic
-    last_notification_time = state_data.get('last_notification_timestamp')
-    should_throttle, minutes_remaining = _should_throttle_notification(last_notification_time, has_data_changes)
-    
-    if should_throttle:
-        print(f"⏳ No data changes - notification throttled (next in {minutes_remaining} minutes)")
-        return False
-    
-    # Double-check throttling just before sending to prevent race conditions
-    # Re-read the current state from disk to get the most recent timestamp
-    try:
-        from data.repository import AtomicJSONRepository
-        temp_repo = AtomicJSONRepository(cfg.STATE_FILE)
-        t0 = time.time()
-        print("🔎 Re-checking state for last_notification_timestamp before send...")
-        current_state = temp_repo.load({})
-        print(f"🔎 State re-check completed in {time.time()-t0:.2f}s")
-        current_last_notification = current_state.get('last_notification_timestamp')
-        
-        # If timestamp changed since we loaded, re-check throttling
-        if current_last_notification != last_notification_time:
-            should_throttle_recheck, _ = _should_throttle_notification(current_last_notification, has_data_changes)
-            if should_throttle_recheck:
-                print("⏳ Notification already sent by another process - skipping")
-                return False
-    except Exception as e:
-        # If re-check fails, continue with original decision to be safe
-        print(f"⚠️ Could not re-check notification state: {e}")
-    
-    # Send notification
-    daily_progress = calculate_daily_progress(state_data)
-    total_lessons = state_data.get('computed_total_sessions', 0)
-    
-    print("📲 Sending push notification...")
-    t_send = time.time()
-    send_ok = notifier.send_simple_notification(
-        daily_progress=daily_progress,
-        units_completed=units_completed,
-        total_lessons=total_lessons,
-        state_data=state_data,
-        json_data=json_data
-    )
-    print(f"📲 Pushover send returned {send_ok} in {time.time()-t_send:.1f}s")
-    
-    # Update notification timestamp only on success
-    if send_ok:
-        state_data['last_notification_timestamp'] = current_timestamp
-        # Log success
-        change_status = "with data changes" if has_data_changes else "after throttle period"
-        print(f"📱 Push notification sent successfully ({change_status})!")
-    else:
-        print("❌ Notification send failed; timestamp not updated.")
-    
-    try:
-        if logger:
-            logger.external_call("notification", "sent_unified", success=bool(send_ok))
-    except: 
-        pass
-    
-    return True
 
 def run_scraper():
     """Runs the duome_raw_scraper.py script to get the latest data."""
@@ -494,25 +370,7 @@ def _update_data_if_changed(has_new_units, has_new_lessons, has_new_sessions, fo
         state_repo.save(state_data)
         print(f"💾 State save (no changes) completed in {time.time()-save_start:.2f}s")
 
-def _send_notifications_if_enabled(has_new_lessons, has_new_units, newly_completed, json_data, state_data, state_repo, current_time_slot):
-    """Send time-based notifications if enabled"""
-    # Initialize Pushover notifier
-    notifier = PushoverNotifier()
-    
-    # Send time-based notifications with throttling logic
-    enabled = notifier.is_enabled()
-    print(f"🔔 Notifications enabled: {enabled}")
-    if enabled:
-        send_start = time.time()
-        notification_sent = send_time_based_notification(
-            notifier, current_time_slot, state_data, 
-            has_new_lessons, has_new_units, len(newly_completed), json_data
-        )
-        print(f"🔔 Notification flow returned in {time.time()-send_start:.2f}s (sent={notification_sent})")
-        
-        # Save state if notification was sent (to persist timestamp)
-        if notification_sent:
-            state_repo.save(state_data)
+# Deprecated notification helper functions removed.
 
 def main():
     """Main execution function."""
@@ -556,8 +414,9 @@ def main():
                            new_total_lessons, new_core_lessons, new_practice_sessions, all_completed_in_json,
                            current_scrape_date, json_data, state_data, state_repo)
     
-    # Send notifications
-    _send_notifications_if_enabled(has_new_lessons, has_new_units, newly_completed, json_data, state_data, state_repo, current_time_slot)
+    # Notifications are now handled by scripts/send_simple_notification.py on a fixed cron schedule.
+    # Intentionally do not send notifications here to avoid duplicates.
+    # _send_notifications_if_enabled(has_new_lessons, has_new_units, newly_completed, json_data, state_data, state_repo, current_time_slot)
 
 
 if __name__ == "__main__":

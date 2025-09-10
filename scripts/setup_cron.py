@@ -38,7 +38,7 @@ class AutomationSetup:
         self.platform = platform.system().lower()
         self.project_root = Path(project_root)
         self.python_path = sys.executable
-        self.entry_script = self.project_root / "scripts" / "daily_update.py"
+        self.entry_script = self.project_root / "scripts" / "send_simple_notification.py"
         
         # Detect environment details
         self.is_wsl = self._detect_wsl()
@@ -68,9 +68,8 @@ class AutomationSetup:
             return f"Unknown ({self.platform})"
     
     def _generate_cron_entry(self) -> str:
-        """Generate cron entry based on current working launchd pattern."""
-        # Current pattern: Every 30 minutes from 6am to 11:30pm + midnight
-        # Cron equivalent: */30 6-23 * * * + 0 0 * * *
+        """Generate cron entries for simple reminder window (08:30–12:00)."""
+        # Desired times: 08:30, 09:00, 09:30, 10:00, 10:30, 11:00, 11:30, 12:00
         log_file = self.project_root / cfg.LOG_DIR / "automation.log"
         
         # Add essential environment variables for cron
@@ -86,8 +85,13 @@ class AutomationSetup:
             f"{self.python_path} {self.entry_script} "
             f">> {log_file} 2>&1"
         )
-        
-        return f"*/30 6-23 * * * {cron_command}\n0 0 * * * {cron_command}"
+        # Build specific cron lines for the window
+        lines = [
+            f"30 8 * * * {cron_command}",      # 08:30
+            f"0,30 9-11 * * * {cron_command}", # 09:00, 09:30, 10:00, 10:30, 11:00, 11:30
+            f"0 12 * * * {cron_command}",      # 12:00
+        ]
+        return "\n".join(lines)
     
     def _get_current_crontab(self) -> str:
         """Get current crontab content."""
@@ -283,8 +287,7 @@ class AutomationSetup:
         
         # Show what will be added
         print(f"🔧 This will:")
-        print(f"   • Run every 30 minutes from 6:00 AM to 11:30 PM")
-        print(f"   • Run once at midnight (00:00)")
+        print(f"   • Run every 30 minutes from 08:30 to 12:00 (08:30, 09:00, 09:30, 10:00, 10:30, 11:00, 11:30, 12:00)")
         print(f"   • Log to: {self.project_root / cfg.LOG_DIR / 'automation.log'}")
         print(f"   • Execute: {self.entry_script}")
         print()

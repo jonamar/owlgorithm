@@ -7,7 +7,10 @@ import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from src.core.daily_tracker import send_time_based_notification
+# Deprecated: notification throttling has been removed. Skip this module.
+pytest.skip("Deprecated: notification throttling removed; tests skipped.", allow_module_level=True)
+
+# from src.core.daily_tracker import send_time_based_notification
 
 
 class TestNotificationThrottling:
