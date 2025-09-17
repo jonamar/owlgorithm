@@ -22,6 +22,7 @@ from .metrics_calculator import (
     count_todays_lessons,
 )
 from utils.validation import validate_venv_python
+from src.data_source import fetch_sessions as fetch_sessions_dispatch
 
 
 def run_scraper(logger=None) -> bool:
@@ -100,7 +101,26 @@ def find_latest_json_file() -> Optional[str]:
 
 
 def run_scraper_and_load_data(logger=None) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """Run scraper and load JSON data."""
+    """Fetch and load JSON data from the configured backend.
+
+    Returns (json_data, source_path). source_path may be None for API backend.
+    """
+    backend = getattr(cfg, 'SCRAPER_BACKEND', 'duome').lower()
+    if backend == 'duolingo_api':
+        # Use informal API backend; no file on disk
+        print("🌐 Using Duolingo API backend (informal).")
+        json_data = fetch_sessions_dispatch(backend='duolingo_api', username=cfg.USERNAME)
+        if not json_data:
+            print("❌ Duolingo API fetch returned no data.")
+            return None, None
+        try:
+            session_count = len(json_data.get('sessions', []))
+        except Exception:
+            session_count = 'unknown'
+        print(f"📥 Loaded API JSON with {session_count} sessions")
+        return json_data, None
+
+    # Default: duome backend via existing scraper
     if not run_scraper(logger=logger):
         if logger:
             logger.execution_step("Scraper failed - exiting")
