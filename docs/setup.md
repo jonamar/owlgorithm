@@ -65,6 +65,8 @@ python scripts/setup.py --all
 python scripts/setup_pushover.py
 ```
 
+> **Important:** Notifications are opt-in. Set `ENABLE_PUSHOVER_NOTIFICATIONS = True` in `config/app_config.py` before running the setup if you want reminders. The default is `False` so fresh clones never send push alerts unexpectedly.
+
 ### 7. Test Your Setup
 ```bash
 # Run a complete data update (scrape + report)

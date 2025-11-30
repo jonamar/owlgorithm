@@ -28,6 +28,10 @@ from data.repository import AtomicJSONRepository  # noqa: E402
 
 def main() -> None:
     notifier = PushoverNotifier()
+    if not getattr(cfg, "ENABLE_PUSHOVER_NOTIFICATIONS", False):
+        print("📵 Pushover notifications disabled via config; skipping send.")
+        return
+
     if not notifier.is_enabled():
         print("📱 Pushover not configured; skipping send.")
         return

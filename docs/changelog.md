@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed schedule: 08:30, then every 30 minutes through 12:00
   - Decoupled from scraping and progress logic
   - Single entrypoint: `scripts/send_simple_notification.py`
+- Pushover notifications are now disabled by default. Set `ENABLE_PUSHOVER_NOTIFICATIONS = True` in `config/app_config.py` to opt in.
 
 ### Removed
 - Deprecated throttling-based notification logic from `src/core/daily_tracker.py`

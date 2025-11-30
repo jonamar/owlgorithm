@@ -29,6 +29,8 @@ VENV_PYTHON_PATH: str = "/path/to/your/project/duolingo_env/bin/python"  # Virtu
 
 # --- API endpoints ---
 PUSHOVER_API_URL: str = "https://api.pushover.net/1/messages.json"
+# Notifications are opt-in so the tracker never sends push alerts unexpectedly.
+ENABLE_PUSHOVER_NOTIFICATIONS: bool = False
 
 # Notification throttling (hours)
 NOTIFICATION_THROTTLE_HOURS: float = 2.5  # Throttle notifications when no data changes

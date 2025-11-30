@@ -31,6 +31,10 @@ class PushoverNotifier:
             config_file = cfg.NOTIFIER_CONFIG_FILE
         self.config_file = config_file
         self.config = self._load_config()
+        # Notifications are globally opt-in via configuration to avoid unexpected pushes.
+        self._notifications_allowed = bool(
+            getattr(cfg, "ENABLE_PUSHOVER_NOTIFICATIONS", False)
+        )
         
     def _load_config(self):
         """Load Pushover configuration from file."""
@@ -66,6 +70,8 @@ class PushoverNotifier:
     
     def is_enabled(self):
         """Check if notifications are enabled and configured."""
+        if not self._notifications_allowed:
+            return False
         return (self.config.get('enabled', False) and 
                 self.config.get('app_token') and 
                 self.config.get('user_key'))
@@ -82,6 +88,10 @@ class PushoverNotifier:
         Returns:
             bool: True if successful, False otherwise
         """
+        if not self._notifications_allowed:
+            print("📵 Pushover notifications disabled via config (ENABLE_PUSHOVER_NOTIFICATIONS=False)")
+            return False
+
         if not self.is_enabled():
             print("📱 Pushover notifications not configured or disabled")
             return False
